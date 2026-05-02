@@ -1,98 +1,179 @@
-import { Image } from 'expo-image';
-import { StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { AppIcon } from '@/components/ui/app-icon';
+import { CardLink } from '@/components/ui/card-link';
+import { FolderContextMenu } from '@/components/ui/folder-context-menu';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { SectionHeader } from '@/components/ui/section-header';
+import { Colors, Typography } from '@/constants/theme';
+import { SavedLinksProvider, useSavedLinks } from '@/context/saved-links-context';
+import type { AnchorPosition } from '@/components/ui/folder-card';
 
 export default function HomeScreen() {
-  const devShortcut =
-    process.env.EXPO_OS === 'ios'
-      ? 'cmd + d'
-      : process.env.EXPO_OS === 'android'
-        ? 'cmd + m'
-        : 'F12';
+  return (
+    <SavedLinksProvider>
+      <HomeScreenContent />
+    </SavedLinksProvider>
+  );
+}
+
+function HomeScreenContent() {
+  const { links, toggleBookmark, deleteLink } = useSavedLinks();
+  const [menuState, setMenuState] = useState<{ visible: boolean; anchor?: AnchorPosition; linkId?: number }>({ visible: false });
+
+  // 최근 저장한 링크 — createdAt 내림차순 상위 3개
+  const recentLinks = links.slice(0, 3);
+
+  const handleMore = (id: number, anchor: AnchorPosition) => {
+    setMenuState({ visible: true, anchor, linkId: id });
+  };
+
+  const selectedLink = links.find((l) => l.id === menuState.linkId);
 
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">{devShortcut}</ThemedText>
-          {' '}to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* 상단 헤더 */}
+        <View style={styles.header}>
+          <View style={styles.wordmark}>
+            <IconSymbol
+              name="checkmark.shield.fill"
+              size={28}
+              color={Colors.brand.primary}
             />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
+            <Text style={styles.brandText}>LinClean</Text>
+          </View>
+          <AppIcon name="settings" size={28} label="설정" onPress={() => router.push('/(tabs)/(home)/settings')} />
+        </View>
+
+        {/* 서브타이틀 */}
+        <Text style={styles.subtitle}>오늘도 안전하게 정리해요</Text>
+
+        {/* 보안 등급별 링크 현황 */}
+        <View style={styles.section}>
+          <SectionHeader label="보안 등급별 링크 현황" />
+          <View style={styles.statPlaceholder}>
+            <View style={styles.statGrid}>
+              <View style={styles.statItem} />
+              <View style={styles.statItem} />
+              <View style={styles.statItem} />
+              <View style={styles.statItem} />
+            </View>
+          </View>
+        </View>
+
+        {/* 최근 저장한 링크 */}
+        <View style={styles.section}>
+          <SectionHeader
+            label="최근 저장한 링크"
+            onViewAll={() => router.push('/saved-links')}
+          />
+          <View style={styles.linkList}>
+            {recentLinks.map((link) => (
+              <CardLink
+                key={link.id}
+                label={link.siteName}
+                title={link.title}
+                summary={link.description}
+                url={link.originalUrl}
+                bookmarked={link.isBookmarked}
+                onBookmark={() => toggleBookmark(link.id)}
+                onMore={(anchor) => handleMore(link.id, anchor)}
               />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+
+      <FolderContextMenu
+        visible={menuState.visible}
+        anchor={menuState.anchor}
+        items={[
+          {
+            label: selectedLink?.isBookmarked ? '북마크 제거' : '북마크 추가',
+            onPress: () => menuState.linkId != null && toggleBookmark(menuState.linkId),
+          },
+          {
+            label: '링크 삭제',
+            onPress: () => menuState.linkId != null && deleteLink(menuState.linkId),
+            destructive: true,
+          },
+        ]}
+        onDismiss={() => setMenuState({ visible: false })}
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  safeArea: {
+    flex: 1,
+    backgroundColor: Colors.brand.background,
+  },
+  scroll: {
+    flex: 1,
+  },
+  content: {
+    paddingHorizontal: 25,
+    paddingBottom: 32,
+    gap: 24,
+  },
+
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
+    paddingTop: 16,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  wordmark: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  brandText: {
+    ...Typography.title,
+    color: Colors.brand.primary,
+  },
+
+  subtitle: {
+    ...Typography.caption,
+    color: Colors.brand.textSecondary,
+    marginTop: -16,
+  },
+
+  section: {
+    gap: 12,
+  },
+
+  statPlaceholder: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.brand.line,
+    padding: 16,
+  },
+  statGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  statItem: {
+    flex: 1,
+    minWidth: '45%',
+    height: 56,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.brand.line,
+    borderStyle: 'dashed',
+  },
+
+  linkList: {
+    gap: 12,
   },
 });
