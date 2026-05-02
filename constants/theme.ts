@@ -1,6 +1,21 @@
 const tintColorLight = '#0a7ea4';
 const tintColorDark = '#fff';
 
+// Brand color tokens (from Figma Design System)
+const primaryColor = '#71A896';
+const primaryDeepColor = '#5F9685';
+const softMintColor = '#DDE9E4';
+const backgroundBrandColor = '#F4F8F6';
+const textPrimaryColor = '#1D2623';
+const lineColor = '#D8E2DE';
+const textSecondaryColor = '#65736D';
+const textHintColor = '#8A9691';
+const textWarningColor = '#E61F1F';
+const textCautionColor = '#C9A227';
+
+const kakaoButtonColor = '#FEE500';
+const kakaoIconColor = '#000000';
+
 export const Colors = {
   light: {
     text: '#11181C',
@@ -17,6 +32,24 @@ export const Colors = {
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
+  },
+  brand: {
+    primary: primaryColor,
+    primaryDeep: primaryDeepColor,
+    softMint: softMintColor,
+    background: backgroundBrandColor,
+    text: textPrimaryColor,
+    line: lineColor,
+    textSecondary: textSecondaryColor,
+    textHint: textHintColor,
+    textWarning: textWarningColor,
+    textCaution: textCautionColor,
+    folderGradientStart: '#8FE2C6',
+    folderGradientEnd: '#499B80',
+  },
+  kakao: {
+    button: kakaoButtonColor,
+    icon: kakaoIconColor,
   },
 };
 
@@ -49,4 +82,33 @@ export const Fonts = {
       : os === 'web'
         ? "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
         : 'monospace',
+};
+
+// Font size tokens (from Figma Design System)
+const fontSizeDisplay = 32;
+const fontSizeTitle = 22;
+const fontSizeSection = 18;
+const fontSizeProfile = 17;
+const fontSizeBody = 16;
+const fontSizeSummary = 14;
+const fontSizeCaption = 13;
+const fontSizeUrl = 12;
+const fontSizeBold12 = 12;
+const fontSizeRegular12 = 12;
+
+// Font weight tokens (from Figma Design System)
+const fontWeightBold = '700' as const;
+const fontWeightRegular = '400' as const;
+
+export const Typography = {
+  display: { fontSize: fontSizeDisplay, fontWeight: fontWeightBold },
+  title: { fontSize: fontSizeTitle, fontWeight: fontWeightBold },
+  section: { fontSize: fontSizeSection, fontWeight: fontWeightBold },
+  profile: { fontSize: fontSizeProfile, fontWeight: fontWeightBold },
+  body: { fontSize: fontSizeBody, fontWeight: fontWeightRegular },
+  summary: { fontSize: fontSizeSummary, fontWeight: fontWeightRegular },
+  caption: { fontSize: fontSizeCaption, fontWeight: fontWeightBold },
+  url: { fontSize: fontSizeUrl, fontWeight: fontWeightRegular, textDecorationLine: 'underline' as const },
+  bold12: { fontSize: fontSizeBold12, fontWeight: fontWeightBold },
+  regular12: { fontSize: fontSizeRegular12, fontWeight: fontWeightRegular },
 };
