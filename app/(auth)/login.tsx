@@ -18,7 +18,6 @@ export default function LoginScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      {/* 로고 + 서브타이틀 */}
       <View style={styles.logoSection}>
         <Image source={IMG_WORDMARK} style={styles.wordmark} contentFit="contain" />
         <Text style={styles.subtitle}>
@@ -26,7 +25,6 @@ export default function LoginScreen() {
         </Text>
       </View>
 
-      {/* 하단 버튼 영역 */}
       <View style={styles.bottomSection}>
         <Pressable
           onPress={handleKakaoLogin}
