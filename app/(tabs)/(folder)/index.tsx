@@ -29,7 +29,7 @@ type MenuState = {
 
 export default function FolderScreen() {
   const router = useRouter();
-  const { links } = useSavedLinks();
+  const { links, assignCategory } = useSavedLinks();
   const { folders: rawFolders, renameFolder, deleteFolder } = useFolders();
   const [menuState, setMenuState] = useState<MenuState>({ visible: false });
   const [renameState, setRenameState] = useState<{ visible: boolean; folderId?: number; value: string }>({
@@ -70,7 +70,12 @@ export default function FolderScreen() {
 
   const handleDelete = () => {
     if (menuState.folderId == null) return;
-    deleteFolder(menuState.folderId);
+    const folderId = menuState.folderId;
+    const linkIds = links.filter((link) => link.categoryId === folderId).map((link) => link.id);
+    if (linkIds.length > 0) {
+      assignCategory(linkIds, null);
+    }
+    deleteFolder(folderId);
   };
 
   const handleAddFolder = () => {
