@@ -9,7 +9,7 @@ import { FilterChip, type FilterChipItem } from '@/components/ui/filter-chip';
 import { FolderContextMenu, type ContextMenuItem } from '@/components/ui/folder-context-menu';
 import type { AnchorPosition } from '@/components/ui/folder-card';
 import { Colors, Typography } from '@/constants/theme';
-import { SavedLinksProvider, useSavedLinks, type SavedLink } from '@/context/saved-links-context';
+import { useSavedLinks, type SavedLink } from '@/context/saved-links-context';
 
 // ─── 폴더 필터 칩 아이템 ──────────────────────────────────────────────────────
 // 실제 구현 시 GET /api/v1/categories 응답으로 교체
@@ -25,14 +25,6 @@ const FOLDER_ITEMS: FilterChipItem[] = [
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function SavedLinksScreen() {
-  return (
-    <SavedLinksProvider>
-      <SavedLinksScreenContent />
-    </SavedLinksProvider>
-  );
-}
-
-function SavedLinksScreenContent() {
   const { links, toggleBookmark, deleteLink } = useSavedLinks();
 
   const [selectedFolder, setSelectedFolder] = useState('all');

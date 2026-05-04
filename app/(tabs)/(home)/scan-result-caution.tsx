@@ -2,17 +2,9 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors, Typography } from '@/constants/theme';
 import { ResultStatusIcon } from '@/components/ui/result-status-icon';
-import { SavedLinksProvider, useSavedLinks } from '@/context/saved-links-context';
+import { useSavedLinks } from '@/context/saved-links-context';
 
 export default function ScanResultCautionScreen() {
-  return (
-    <SavedLinksProvider>
-      <ScanResultCautionScreenContent />
-    </SavedLinksProvider>
-  );
-}
-
-function ScanResultCautionScreenContent() {
   const { url } = useLocalSearchParams<{ url: string }>();
   const { addLink } = useSavedLinks();
 

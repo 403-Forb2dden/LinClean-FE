@@ -8,18 +8,10 @@ import { FolderContextMenu } from '@/components/ui/folder-context-menu';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Colors, Typography } from '@/constants/theme';
-import { SavedLinksProvider, useSavedLinks } from '@/context/saved-links-context';
+import { useSavedLinks } from '@/context/saved-links-context';
 import type { AnchorPosition } from '@/components/ui/folder-card';
 
 export default function HomeScreen() {
-  return (
-    <SavedLinksProvider>
-      <HomeScreenContent />
-    </SavedLinksProvider>
-  );
-}
-
-function HomeScreenContent() {
   const { links, toggleBookmark, deleteLink } = useSavedLinks();
   const [menuState, setMenuState] = useState<{ visible: boolean; anchor?: AnchorPosition; linkId?: number }>({ visible: false });
 

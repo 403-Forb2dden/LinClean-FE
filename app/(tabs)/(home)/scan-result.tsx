@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors, Typography } from '@/constants/theme';
-import { SavedLinksProvider, useSavedLinks } from '@/context/saved-links-context';
+import { useSavedLinks } from '@/context/saved-links-context';
 
 // TODO: 백엔드 연동 시 아래 흐름으로 교체
 // 1. scanning.tsx에서 POST /api/v1/analyses → analysisId 수신 후 params로 전달
@@ -12,14 +12,6 @@ import { SavedLinksProvider, useSavedLinks } from '@/context/saved-links-context
 // API 명세: Draft of the specification.md > 4.1 링크 저장 참고
 
 export default function ScanResultScreen() {
-  return (
-    <SavedLinksProvider>
-      <ScanResultScreenContent />
-    </SavedLinksProvider>
-  );
-}
-
-function ScanResultScreenContent() {
   const { url } = useLocalSearchParams<{ url: string }>();
   const { addLink } = useSavedLinks();
 
