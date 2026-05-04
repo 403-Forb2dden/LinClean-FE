@@ -65,7 +65,7 @@ export default function SettingsScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* 공지 */}
+
         <SectionLabel label="공지" />
         <View style={styles.group}>
           <SettingRow
