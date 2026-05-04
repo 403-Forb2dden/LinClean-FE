@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 
 import { Colors, Typography } from '@/constants/theme';
-import { IconSymbol } from './icon-symbol';
+import { IconSymbol, type IconSymbolName } from './icon-symbol';
 
 export type AppIconName =
   | 'bookmark'
@@ -23,7 +23,7 @@ export type AppIconName =
   | 'settings'
   | 'search';
 
-const SYMBOL_MAP: Record<AppIconName, string> = {
+const SYMBOL_MAP: Record<AppIconName, IconSymbolName> = {
   bookmark: 'bookmark.fill',
   'chevron-down': 'chevron.down',
   'chevron-right': 'chevron.right',
@@ -33,7 +33,7 @@ const SYMBOL_MAP: Record<AppIconName, string> = {
   user: 'person.fill',
   back: 'chevron.left',
   home: 'house.fill',
-  more: 'ellipsis.vertical',
+  more: 'ellipsis',
   settings: 'gearshape.fill',
   search: 'magnifyingglass',
 };
@@ -68,7 +68,7 @@ export function AppIcon({
     >
       {icon && (
         <IconSymbol
-          name={SYMBOL_MAP[name] as Parameters<typeof IconSymbol>[0]['name']}
+          name={SYMBOL_MAP[name]}
           size={size}
           color={iconColor}
         />
