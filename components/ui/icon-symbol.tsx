@@ -5,8 +5,7 @@ import { SymbolWeight, SymbolViewProps } from 'expo-symbols';
 import { ComponentProps } from 'react';
 import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native';
 
-type IconMapping = Record<SymbolViewProps['name'], ComponentProps<typeof MaterialIcons>['name']>;
-type IconSymbolName = keyof typeof MAPPING;
+type IconMapping = Partial<Record<SymbolViewProps['name'], ComponentProps<typeof MaterialIcons>['name']>>;
 
 /**
  * Add your SF Symbols to Material Icons mappings here.
@@ -14,11 +13,29 @@ type IconSymbolName = keyof typeof MAPPING;
  * - see SF Symbols in the [SF Symbols](https://developer.apple.com/sf-symbols/) app.
  */
 const MAPPING = {
+  'bookmark': 'bookmark-border',
+  'bookmark.fill': 'bookmark',
+  'checkmark.circle.fill': 'check-circle',
+  'chevron.down': 'keyboard-arrow-down',
+  'chevron.left': 'chevron-left',
   'house.fill': 'home',
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
-} as IconMapping;
+  'ellipsis': 'more-horiz',
+  'eraser': 'backspace',
+  'folder': 'folder',
+  'folder.fill': 'folder',
+  'gearshape.fill': 'settings',
+  'link.badge.plus': 'add-link',
+  'magnifyingglass': 'search',
+  'pencil': 'edit',
+  'person.fill': 'person',
+  'plus': 'add',
+  'trash': 'delete',
+} as const satisfies IconMapping;
+
+export type IconSymbolName = keyof typeof MAPPING;
 
 /**
  * An icon component that uses native SF Symbols on iOS, and Material Icons on Android and web.
