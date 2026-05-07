@@ -5,7 +5,8 @@ import { SymbolWeight, SymbolViewProps } from 'expo-symbols';
 import { ComponentProps } from 'react';
 import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native';
 
-type IconMapping = Partial<Record<SymbolViewProps['name'], ComponentProps<typeof MaterialIcons>['name']>>;
+type MaterialIconName = ComponentProps<typeof MaterialIcons>['name'];
+type IconMapping = Partial<Record<SymbolViewProps['name'], MaterialIconName>> & Record<string, MaterialIconName>;
 
 /**
  * Add your SF Symbols to Material Icons mappings here.
@@ -14,21 +15,23 @@ type IconMapping = Partial<Record<SymbolViewProps['name'], ComponentProps<typeof
  */
 const MAPPING = {
   'bookmark': 'bookmark-border',
-  'bookmark.fill': 'bookmark',
+  'bookmark.fill': 'bookmarks',
   'checkmark.circle.fill': 'check-circle',
-  'chevron.down': 'keyboard-arrow-down',
+  'checkmark.shield.fill': 'verified-user',
+  'chevron.down': 'expand-more',
   'chevron.left': 'chevron-left',
-  'house.fill': 'home',
-  'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
   'ellipsis': 'more-horiz',
+  'ellipsis.vertical': 'more-vert',
   'eraser': 'backspace',
   'folder': 'folder',
   'folder.fill': 'folder',
   'gearshape.fill': 'settings',
+  'house.fill': 'home',
   'link.badge.plus': 'add-link',
   'magnifyingglass': 'search',
+  'paperplane.fill': 'send',
   'pencil': 'edit',
   'person.fill': 'person',
   'plus': 'add',
