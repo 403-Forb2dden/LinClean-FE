@@ -1,37 +1,48 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { router, Tabs } from 'expo-router';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
+import { BottomTabBar, type TabVariant } from '@/components/ui/bottom-tab-bar';
 import { SavedLinksProvider } from '@/context/saved-links-context';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+
+const ROUTE_TO_TAB: Record<string, TabVariant> = {
+  '(home)': 'home',
+};
+
+const TAB_TO_HREF: Partial<Record<TabVariant, string>> = {
+  home: '/(tabs)/(home)',
+};
+
+function CustomTabBar({ state }: BottomTabBarProps) {
+  const activeRoute = state.routes[state.index];
+  const activeRouteName = activeRoute?.name ?? '(home)';
+  const activeTab = ROUTE_TO_TAB[activeRouteName] ?? 'home';
+
+  function handleTabPress(tab: TabVariant) {
+    const href = TAB_TO_HREF[tab];
+    if (href) {
+      router.navigate(href as any);
+    }
+  }
+
+  return (
+    <BottomTabBar
+      activeTab={activeTab}
+      onTabPress={handleTabPress}
+      addLink={{ disabled: true }}
+      folder={{ disabled: true }}
+    />
+  );
+}
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <SavedLinksProvider>
       <Tabs
-        screenOptions={{
-          tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-          headerShown: false,
-          tabBarButton: HapticTab,
-        }}>
-        <Tabs.Screen
-          name="(home)"
-          options={{
-            title: 'Home',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="(explore)"
-          options={{
-            title: 'Explore',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-          }}
-        />
+        tabBar={(props) => <CustomTabBar {...props} />}
+        screenOptions={{ headerShown: false }}
+      >
+        <Tabs.Screen name="(home)" />
+        <Tabs.Screen name="(explore)" options={{ href: null }} />
       </Tabs>
     </SavedLinksProvider>
   );
