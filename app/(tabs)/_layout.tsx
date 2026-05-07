@@ -1,7 +1,8 @@
-import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { router, Tabs } from 'expo-router';
 
-import { BottomTabBar, TabVariant } from '@/components/ui/bottom-tab-bar';
+import { BottomTabBar, type TabVariant } from '@/components/ui/bottom-tab-bar';
+import { SavedLinksProvider } from '@/context/saved-links-context';
 
 const ROUTE_TO_TAB: Record<string, TabVariant> = {
   '(home)': 'home',
@@ -35,12 +36,14 @@ function CustomTabBar({ state }: BottomTabBarProps) {
 
 export default function TabLayout() {
   return (
-    <Tabs
-      tabBar={(props) => <CustomTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
-    >
-      <Tabs.Screen name="(home)" />
-      <Tabs.Screen name="(explore)" options={{ href: null }} />
-    </Tabs>
+    <SavedLinksProvider>
+      <Tabs
+        tabBar={(props) => <CustomTabBar {...props} />}
+        screenOptions={{ headerShown: false }}
+      >
+        <Tabs.Screen name="(home)" />
+        <Tabs.Screen name="(explore)" options={{ href: null }} />
+      </Tabs>
+    </SavedLinksProvider>
   );
 }
