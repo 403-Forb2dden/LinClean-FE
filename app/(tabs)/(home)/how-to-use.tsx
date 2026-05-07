@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/ui/app-icon';
 import { Colors, Typography } from '@/constants/theme';
 
+// TODO: 서비스 이용방법은 추후 GET /api/v1/app-documents/service_guide API 연동으로 대체
 const STEPS = [
   {
     step: '01',

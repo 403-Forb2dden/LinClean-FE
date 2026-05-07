@@ -5,7 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/ui/app-icon';
 import { Colors, Typography } from '@/constants/theme';
 
-// TODO: 백엔드 연동 시 GET /notices API로 교체
+// TODO: 공지사항 목록은 추후 GET /api/v1/notices API 연동으로 대체
+// TODO: 공지사항 상세 화면 추가 시 선택한 공지는 GET /api/v1/notices/{id} API 연동으로 조회
 const PLACEHOLDER_NOTICES: { id: number; title: string; date: string; isPinned: boolean }[] = [
   { id: 1, title: 'LinClean 서비스 오픈 안내', date: '2026.04.01', isPinned: true },
   { id: 2, title: '개인정보 처리방침 개정 안내', date: '2026.03.15', isPinned: false },

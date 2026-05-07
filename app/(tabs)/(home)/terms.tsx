@@ -19,6 +19,7 @@ export default function TermsScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {/* TODO: 서비스 이용약관은 추후 GET /api/v1/app-documents/terms_of_service API 연동으로 대체 */}
         <Text style={styles.updated}>최종 업데이트: 2026년 4월 1일</Text>
 
         <Section title="제1조 (목적)">

@@ -19,6 +19,7 @@ export default function PrivacyScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {/* TODO: 개인정보 처리방침은 추후 GET /api/v1/app-documents/privacy_policy API 연동으로 대체 */}
         <Text style={styles.updated}>최종 업데이트: 2026년 4월 1일</Text>
 
         <Section title="1. 수집하는 개인정보 항목">
