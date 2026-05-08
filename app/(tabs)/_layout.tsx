@@ -6,10 +6,13 @@ import { SavedLinksProvider } from '@/context/saved-links-context';
 
 const ROUTE_TO_TAB: Record<string, TabVariant> = {
   '(home)': 'home',
+  '(folder)': 'folder',
 };
 
 const TAB_TO_HREF: Partial<Record<TabVariant, string>> = {
   home: '/(tabs)/(home)',
+  addLink: '/(tabs)/(home)/add-link',
+  folder: '/(tabs)/(folder)',
 };
 
 function CustomTabBar({ state }: BottomTabBarProps) {
@@ -28,8 +31,6 @@ function CustomTabBar({ state }: BottomTabBarProps) {
     <BottomTabBar
       activeTab={activeTab}
       onTabPress={handleTabPress}
-      addLink={{ disabled: true }}
-      folder={{ disabled: true }}
     />
   );
 }
@@ -42,6 +43,7 @@ export default function TabLayout() {
         screenOptions={{ headerShown: false }}
       >
         <Tabs.Screen name="(home)" />
+        <Tabs.Screen name="(folder)" />
         <Tabs.Screen name="(explore)" options={{ href: null }} />
       </Tabs>
     </SavedLinksProvider>
