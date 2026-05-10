@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   },
   urlBox: {
     height: 56,
-    borderRadius: 18,
+    borderRadius: 20,
     backgroundColor: Colors.brand.background,
     justifyContent: 'center',
     paddingHorizontal: 18,
