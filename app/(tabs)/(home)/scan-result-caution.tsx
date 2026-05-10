@@ -1,7 +1,7 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Colors, Typography } from '@/constants/theme';
 import { ResultStatusIcon } from '@/components/ui/result-status-icon';
+import { Colors, Typography } from '@/constants/theme';
 import { useSavedLinks } from '@/context/saved-links-context';
 
 export default function ScanResultCautionScreen() {
@@ -110,6 +110,7 @@ const styles = StyleSheet.create({
 
   resultTitle: {
     ...Typography.display,
+    fontSize: 30,
     color: Colors.brand.text,
     textAlign: 'center',
     marginBottom: 12,
@@ -135,8 +136,7 @@ const styles = StyleSheet.create({
     color: Colors.brand.textHint,
   },
   cardUrl: {
-    ...Typography.body,
-    fontWeight: '700',
+    ...Typography.url,
     color: Colors.brand.text,
   },
 

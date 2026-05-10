@@ -1,6 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ResultStatusIcon } from '@/components/ui/result-status-icon';
 import { Colors, Typography } from '@/constants/theme';
 import { useSavedLinks } from '@/context/saved-links-context';
 
@@ -66,16 +66,7 @@ export default function ScanResultScreen() {
       >
         {/* 안전 배지 영역 */}
         <View style={styles.badgeArea}>
-          <View style={styles.orbOuter}>
-            <View style={styles.orbInner}>
-              <Ionicons name="shield-checkmark" size={56} color={Colors.brand.primary} />
-            </View>
-          </View>
-
-          {/* 안전 칩 */}
-          <View style={styles.chip}>
-            <Text style={styles.chipText}>안전</Text>
-          </View>
+          <ResultStatusIcon variant="safe" label="안전" size="large" />
         </View>
 
         {/* 결과 텍스트 */}
@@ -123,39 +114,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 32,
   },
-  orbOuter: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: Colors.brand.softMint,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  orbInner: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: Colors.brand.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chip: {
-    backgroundColor: Colors.light.background,
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 20,
-    borderWidth: 1,
-    borderColor: Colors.brand.line,
-  },
-  chipText: {
-    ...Typography.summary,
-    color: Colors.brand.text,
-  },
 
   // 결과 텍스트
   resultTitle: {
     ...Typography.display,
+    fontSize: 30,
     color: Colors.brand.text,
     textAlign: 'center',
     marginBottom: 12,
@@ -182,8 +145,7 @@ const styles = StyleSheet.create({
     color: Colors.brand.textHint,
   },
   cardUrl: {
-    ...Typography.body,
-    fontWeight: '700',
+    ...Typography.url,
     color: Colors.brand.text,
   },
 
