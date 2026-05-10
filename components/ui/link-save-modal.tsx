@@ -75,6 +75,7 @@ export function LinkSaveModal({
               returnKeyType="done"
               onSubmitEditing={handleSave}
               maxLength={50}
+              autoFocus
             />
           </View>
 
