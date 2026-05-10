@@ -16,6 +16,7 @@ import { Colors, Typography } from '@/constants/theme';
 interface LinkSaveModalProps {
   visible: boolean;
   url: string;
+  // 향후 링크카드 more 버튼의 URL 제목 수정 기능에서 기존 제목을 초기값으로 사용합니다.
   initialTitle?: string;
   onCancel: () => void;
   onSave: (title: string) => void;
