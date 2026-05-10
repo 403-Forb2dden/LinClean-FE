@@ -1,12 +1,16 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ResultStatusIcon } from '@/components/ui/result-status-icon';
+import { ScanResultReason } from '@/components/ui/scan-result-reason';
+import { getMockScanResultReason } from '@/constants/scan-result-reasons';
 import { Colors, Typography } from '@/constants/theme';
 import { useSavedLinks } from '@/context/saved-links-context';
 
 export default function ScanResultCautionScreen() {
   const { url } = useLocalSearchParams<{ url: string }>();
   const { addLink } = useSavedLinks();
+  // TODO: 테스트용 mock 판정 이유입니다. 백엔드 reason 응답 연동 시 제거합니다.
+  const reason = getMockScanResultReason('caution');
 
   const handleSave = () => {
     // TODO: POST /api/v1/saved-links { analysisId } 호출 후 응답으로 교체
@@ -63,9 +67,8 @@ export default function ScanResultCautionScreen() {
 
         {/* 결과 텍스트 */}
         <Text style={styles.resultTitle}>주의가 필요한 링크입니다.</Text>
-        <Text style={styles.resultSubtitle}>
-          {'의심 신호가 일부 감지됐어요.\n계속 진행할지 한번 더 확인하세요.'}
-        </Text>
+
+        <ScanResultReason reason={reason} />
 
         {/* 검사 대상 카드 */}
         <View style={styles.card}>
@@ -98,14 +101,14 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 40,
+    paddingTop: 4,
+    paddingBottom: 32,
     alignItems: 'center',
   },
 
   badgeArea: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 20,
   },
 
   resultTitle: {
@@ -113,23 +116,15 @@ const styles = StyleSheet.create({
     fontSize: 30,
     color: Colors.brand.text,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  resultSubtitle: {
-    ...Typography.body,
-    color: Colors.brand.textSecondary,
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 40,
-  },
-
   card: {
     width: '100%',
     backgroundColor: Colors.light.background,
     borderRadius: 16,
     padding: 16,
     gap: 6,
-    marginBottom: 40,
+    marginBottom: 28,
   },
   cardLabel: {
     ...Typography.caption,

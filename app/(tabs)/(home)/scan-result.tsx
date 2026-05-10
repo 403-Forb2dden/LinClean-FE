@@ -1,6 +1,8 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ResultStatusIcon } from '@/components/ui/result-status-icon';
+import { ScanResultReason } from '@/components/ui/scan-result-reason';
+import { getMockScanResultReason } from '@/constants/scan-result-reasons';
 import { Colors, Typography } from '@/constants/theme';
 import { useSavedLinks } from '@/context/saved-links-context';
 
@@ -14,6 +16,8 @@ import { useSavedLinks } from '@/context/saved-links-context';
 export default function ScanResultScreen() {
   const { url } = useLocalSearchParams<{ url: string }>();
   const { addLink } = useSavedLinks();
+  // TODO: 테스트용 mock 판정 이유입니다. 백엔드 reason 응답 연동 시 제거합니다.
+  const reason = getMockScanResultReason('safe');
 
   const handleSave = () => {
     // TODO: POST /api/v1/saved-links { analysisId } 호출 후 응답으로 교체
@@ -71,7 +75,8 @@ export default function ScanResultScreen() {
 
         {/* 결과 텍스트 */}
         <Text style={styles.resultTitle}>안전한 웹사이트입니다.</Text>
-        <Text style={styles.resultSubtitle}>저장 후 바로 접속하거나,{'\n'}즉시 URL로 이동할 수 있어요.</Text>
+
+        <ScanResultReason reason={reason} />
 
         {/* 검사 대상 카드 */}
         <View style={styles.card}>
@@ -104,15 +109,15 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 40,
+    paddingTop: 4,
+    paddingBottom: 32,
     alignItems: 'center',
   },
 
   // 배지 영역
   badgeArea: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 20,
   },
 
   // 결과 텍스트
@@ -121,16 +126,8 @@ const styles = StyleSheet.create({
     fontSize: 30,
     color: Colors.brand.text,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  resultSubtitle: {
-    ...Typography.body,
-    color: Colors.brand.textSecondary,
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 40,
-  },
-
   // 검사 대상 카드
   card: {
     width: '100%',
@@ -138,7 +135,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     gap: 6,
-    marginBottom: 40,
+    marginBottom: 28,
   },
   cardLabel: {
     ...Typography.caption,
