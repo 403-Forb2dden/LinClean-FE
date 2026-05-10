@@ -26,7 +26,7 @@ export default function ScanResultBlockScreen() {
       >
         {/* 차단 배지 */}
         <View style={styles.badgeArea}>
-          <ResultStatusIcon variant="block" label="차단" />
+          <ResultStatusIcon variant="block" label="차단" size="large" />
         </View>
 
         {/* 결과 텍스트 */}

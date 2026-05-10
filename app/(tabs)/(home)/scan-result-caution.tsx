@@ -58,7 +58,7 @@ export default function ScanResultCautionScreen() {
       >
         {/* 주의 배지 */}
         <View style={styles.badgeArea}>
-          <ResultStatusIcon variant="caution" label="주의" />
+          <ResultStatusIcon variant="caution" label="주의" size="large" />
         </View>
 
         {/* 결과 텍스트 */}
