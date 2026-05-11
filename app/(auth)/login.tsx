@@ -1,20 +1,33 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SocialLoginButton, type SocialLoginProvider } from '@/components/ui/social-login-button';
 import { Colors, Typography } from '@/constants/theme';
-import { KakaoIcon } from '@/components/ui/kakao-icon';
 
 const IMG_WORDMARK = require('@/assets/images/login_wordmark.png');
+
+type ClerkOAuthStrategy = 'oauth_google' | 'oauth_apple';
+
+const OAUTH_STRATEGY_BY_PROVIDER: Record<SocialLoginProvider, ClerkOAuthStrategy> = {
+  google: 'oauth_google',
+  apple: 'oauth_apple',
+};
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
 
-  const handleKakaoLogin = () => {
-    // TODO: 카카오 OAuth 구현
+  const handleClerkOAuthLogin = (provider: SocialLoginProvider) => {
+    const strategy = OAUTH_STRATEGY_BY_PROVIDER[provider];
+
+    // TODO: Clerk useOAuth({ strategy }) 연동 후 startOAuthFlow 결과에 따라 라우팅 처리
+    void strategy;
     router.replace('/(tabs)/(home)');
   };
+
+  const handleGoogleLogin = () => handleClerkOAuthLogin('google');
+  const handleAppleLogin = () => handleClerkOAuthLogin('apple');
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
@@ -26,16 +39,19 @@ export default function LoginScreen() {
       </View>
 
       <View style={styles.bottomSection}>
-        <Pressable
-          onPress={handleKakaoLogin}
-          style={({ pressed }) => [styles.kakaoButton, pressed && styles.kakaoButtonPressed]}
-        >
-          <KakaoIcon size={24} color={Colors.kakao.icon} />
-          <Text style={styles.kakaoButtonText}>카카오톡으로 시작하기</Text>
-        </Pressable>
+        <SocialLoginButton
+          provider="google"
+          label="Google로 계속하기"
+          onPress={handleGoogleLogin}
+        />
+        <SocialLoginButton
+          provider="apple"
+          label="Apple로 계속하기"
+          onPress={handleAppleLogin}
+        />
 
         <Text style={styles.terms}>
-          가입 시 서비스 약관 및 개인정보 처리방침에 동의한 것으로 간주합니다.
+          계속 진행하면 서비스 이용약관 및 개인정보 처리방침에 동의하는 것으로 간주됩니다.
         </Text>
       </View>
     </View>
@@ -65,28 +81,13 @@ const styles = StyleSheet.create({
     lineHeight: 26,
   },
   bottomSection: {
-    gap: 12,
+    gap: 10,
     paddingBottom: 16,
-  },
-  kakaoButton: {
-    height: 56,
-    backgroundColor: Colors.kakao.button,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  kakaoButtonPressed: {
-    opacity: 0.85,
-  },
-  kakaoButtonText: {
-    ...Typography.section,
-    color: '#000000',
   },
   terms: {
     ...Typography.url,
     color: Colors.brand.textHint,
     textAlign: 'center',
+    lineHeight: 18,
   },
 });
