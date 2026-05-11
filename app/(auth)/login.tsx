@@ -1,33 +1,65 @@
+import { useAuth, useSSO } from '@clerk/expo';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import { useState } from 'react';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { SocialLoginButton, type SocialLoginProvider } from '@/components/ui/social-login-button';
+import { SocialLoginButton } from '@/components/ui/social-login-button';
 import { Colors, Typography } from '@/constants/theme';
+import { syncAuthenticatedMember } from '@/services/auth-api';
 
 const IMG_WORDMARK = require('@/assets/images/login_wordmark.png');
 
-type ClerkOAuthStrategy = 'oauth_google' | 'oauth_apple';
-
-const OAUTH_STRATEGY_BY_PROVIDER: Record<SocialLoginProvider, ClerkOAuthStrategy> = {
-  google: 'oauth_google',
-  apple: 'oauth_apple',
-};
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
+  const { getToken, signOut } = useAuth();
+  const { startSSOFlow } = useSSO();
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
-  const handleClerkOAuthLogin = (provider: SocialLoginProvider) => {
-    const strategy = OAUTH_STRATEGY_BY_PROVIDER[provider];
+  const handleGoogleLogin = async () => {
+    if (isSigningIn) {
+      return;
+    }
 
-    // TODO: Clerk useOAuth({ strategy }) 연동 후 startOAuthFlow 결과에 따라 라우팅 처리
-    void strategy;
-    router.replace('/(tabs)/(home)');
+    setIsSigningIn(true);
+    let sessionActivated = false;
+
+    try {
+      const { createdSessionId, setActive } = await startSSOFlow({
+        strategy: 'oauth_google',
+      });
+
+      if (!createdSessionId || !setActive) {
+        return;
+      }
+
+      await setActive({ session: createdSessionId });
+      sessionActivated = true;
+      await syncAuthenticatedMember(getToken);
+      router.replace('/(tabs)/(home)');
+    } catch (error) {
+      console.error(error);
+
+      if (sessionActivated) {
+        try {
+          await signOut();
+        } catch (signOutError) {
+          console.error(signOutError);
+        }
+      }
+
+      Alert.alert(
+        '로그인 실패',
+        '계정 연결 중 서버와 통신하지 못했습니다. 잠시 후 다시 시도해주세요.'
+      );
+    } finally {
+      setIsSigningIn(false);
+    }
   };
-
-  const handleGoogleLogin = () => handleClerkOAuthLogin('google');
-  const handleAppleLogin = () => handleClerkOAuthLogin('apple');
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
@@ -41,17 +73,13 @@ export default function LoginScreen() {
       <View style={styles.bottomSection}>
         <SocialLoginButton
           provider="google"
-          label="Google로 계속하기"
+          label={isSigningIn ? 'Google 로그인 중...' : 'Google로 계속하기'}
           onPress={handleGoogleLogin}
-        />
-        <SocialLoginButton
-          provider="apple"
-          label="Apple로 계속하기"
-          onPress={handleAppleLogin}
+          disabled={isSigningIn}
         />
 
         <Text style={styles.terms}>
-          계속 진행하면 서비스 이용약관 및 개인정보 처리방침에 동의하는 것으로 간주됩니다.
+          계속 진행하면 서비스 이용약관 및 개인정보 처리방침에 동의하는 것으로 간주합니다.
         </Text>
       </View>
     </View>

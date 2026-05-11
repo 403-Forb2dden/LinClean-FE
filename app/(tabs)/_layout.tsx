@@ -1,8 +1,11 @@
+import { useAuth } from '@clerk/expo';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { router, Tabs } from 'expo-router';
+import { Redirect, router, Tabs } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 
 import { BottomTabBar, type TabVariant } from '@/components/ui/bottom-tab-bar';
 import { SavedLinksProvider } from '@/context/saved-links-context';
+import { syncAuthenticatedMember } from '@/services/auth-api';
 
 const ROUTE_TO_TAB: Record<string, TabVariant> = {
   '(home)': 'home',
@@ -36,6 +39,85 @@ function CustomTabBar({ state }: BottomTabBarProps) {
 }
 
 export default function TabLayout() {
+  const { getToken, isLoaded, isSignedIn, sessionId, signOut } = useAuth();
+  const [hasSyncedMember, setHasSyncedMember] = useState(false);
+  const syncedSessionIdRef = useRef<string | null>(null);
+  const getTokenRef = useRef(getToken);
+  const signOutRef = useRef(signOut);
+
+  useEffect(() => {
+    getTokenRef.current = getToken;
+  }, [getToken]);
+
+  useEffect(() => {
+    signOutRef.current = signOut;
+  }, [signOut]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!isLoaded) {
+      return undefined;
+    }
+
+    if (!isSignedIn) {
+      syncedSessionIdRef.current = null;
+      setHasSyncedMember(false);
+      return undefined;
+    }
+
+    if (!sessionId) {
+      setHasSyncedMember(false);
+      return undefined;
+    }
+
+    if (syncedSessionIdRef.current === sessionId) {
+      setHasSyncedMember(true);
+      return undefined;
+    }
+
+    setHasSyncedMember(false);
+
+    syncAuthenticatedMember(() => getTokenRef.current())
+      .then(() => {
+        if (isMounted) {
+          syncedSessionIdRef.current = sessionId;
+          setHasSyncedMember(true);
+        }
+      })
+      .catch(async (error) => {
+        console.error(error);
+
+        try {
+          await signOutRef.current();
+        } catch (signOutError) {
+          console.error(signOutError);
+        }
+
+        if (isMounted) {
+          syncedSessionIdRef.current = null;
+          setHasSyncedMember(false);
+          router.replace('/login' as any);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isLoaded, isSignedIn, sessionId]);
+
+  if (!isLoaded) {
+    return null;
+  }
+
+  if (!isSignedIn) {
+    return <Redirect href="/login" />;
+  }
+
+  if (!hasSyncedMember) {
+    return null;
+  }
+
   return (
     <SavedLinksProvider>
       <Tabs
