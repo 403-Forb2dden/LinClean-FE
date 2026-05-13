@@ -28,20 +28,7 @@ const VERDICT_LABELS: Record<LinkVerdict, string> = {
   danger: '위험',
 };
 
-const VERDICT_COLORS: Record<LinkVerdict, { background: string; text: string }> = {
-  safe: {
-    background: Colors.brand.softMint,
-    text: '#2F6F5F',
-  },
-  caution: {
-    background: '#F5ECC8',
-    text: '#8A6500',
-  },
-  danger: {
-    background: '#F5C8C8',
-    text: Colors.brand.textWarning,
-  },
-};
+const VERDICT_COLORS: Record<LinkVerdict, { background: string; text: string }> = Colors.brand.verdict;
 
 function normalizeLinkUrl(value?: string | null) {
   const trimmed = value?.trim();
@@ -186,7 +173,7 @@ export function CardLink({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.brand.surface,
     borderRadius: 22,
     borderWidth: 1,
     borderColor: Colors.brand.line,
