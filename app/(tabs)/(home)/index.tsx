@@ -72,7 +72,6 @@ export default function HomeScreen() {
                 key={link.id}
                 verdict={link.verdict}
                 title={link.title}
-                url={link.originalUrl}
                 originalUrl={link.originalUrl}
                 finalUrl={link.finalUrl}
                 bookmarked={link.isBookmarked}

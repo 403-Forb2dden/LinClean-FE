@@ -70,7 +70,6 @@ function SelectableCard({ link, selected, onToggle }: SelectableCardProps) {
       <CardLink
         verdict={link.verdict}
         title={link.title}
-        url={link.originalUrl}
         originalUrl={link.originalUrl}
         finalUrl={link.finalUrl}
         bookmarked={link.isBookmarked}

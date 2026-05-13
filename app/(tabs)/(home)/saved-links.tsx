@@ -96,7 +96,6 @@ export default function SavedLinksScreen() {
           <CardLink
             verdict={item.verdict}
             title={item.title}
-            url={item.originalUrl}
             originalUrl={item.originalUrl}
             finalUrl={item.finalUrl}
             bookmarked={item.isBookmarked}

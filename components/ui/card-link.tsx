@@ -11,7 +11,6 @@ export interface CardLinkProps {
   label?: string | null;
   title?: string | null;
   summary?: string | null;
-  url?: string | null;
   originalUrl?: string | null;
   finalUrl?: string | null;
   verdict?: LinkVerdict | null;
@@ -59,7 +58,6 @@ export function CardLink({
   label,
   title,
   summary,
-  url,
   originalUrl,
   finalUrl,
   verdict,
@@ -71,9 +69,9 @@ export function CardLink({
   onPress,
 }: CardLinkProps) {
   const moreRef = useRef<View>(null);
-  const displayUrl = getFirstText(url, finalUrl, originalUrl) ?? 'URL 정보 없음';
+  const displayUrl = getFirstText(finalUrl, originalUrl) ?? 'URL 정보 없음';
   const displayTitle = getFirstText(title, summary, displayUrl) ?? '제목 없음';
-  const openUrl = normalizeLinkUrl(getFirstText(finalUrl, originalUrl, url));
+  const openUrl = normalizeLinkUrl(getFirstText(finalUrl, originalUrl));
   const normalizedVerdict = verdict && verdict in VERDICT_LABELS ? verdict : undefined;
   const statusLabel = normalizedVerdict ? VERDICT_LABELS[normalizedVerdict] : (getFirstText(label) ?? '결과 없음');
   const statusColors = normalizedVerdict ? VERDICT_COLORS[normalizedVerdict] : undefined;
