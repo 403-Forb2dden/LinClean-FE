@@ -70,10 +70,11 @@ export default function HomeScreen() {
             {recentLinks.map((link) => (
               <CardLink
                 key={link.id}
-                label={link.siteName}
+                verdict={link.verdict}
                 title={link.title}
-                summary={link.description}
                 url={link.originalUrl}
+                originalUrl={link.originalUrl}
+                finalUrl={link.finalUrl}
                 bookmarked={link.isBookmarked}
                 onBookmark={() => toggleBookmark(link.id)}
                 onMore={(anchor) => handleMore(link.id, anchor)}

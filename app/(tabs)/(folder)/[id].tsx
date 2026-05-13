@@ -94,16 +94,14 @@ export default function FolderDetailScreen() {
             {folderLinks.map((link) => (
               <SwipeableCardLink
                 key={link.id}
-                label={link.siteName}
+                verdict={link.verdict}
                 title={link.title}
-                summary={link.description}
                 url={link.originalUrl}
+                originalUrl={link.originalUrl}
+                finalUrl={link.finalUrl}
                 bookmarked={link.isBookmarked}
                 onBookmark={() => toggleBookmark(link.id)}
                 onMore={(anchor: AnchorPosition) => handleMore(link.id, anchor)}
-                onPress={() => {
-                  // TODO: 링크 상세/분석 결과 화면 이동
-                }}
                 onDelete={() => handleDelete(link.id)}
               />
             ))}

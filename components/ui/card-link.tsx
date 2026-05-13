@@ -1,16 +1,20 @@
 import { useRef } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
 import { Colors, Typography } from '@/constants/theme';
 import type { AnchorPosition } from './folder-card';
 import { IconSymbol } from './icon-symbol';
 
 export type CardLinkVariant = 'default' | 'no-icon' | 'disabled';
+export type LinkVerdict = 'safe' | 'caution' | 'danger';
 
 export interface CardLinkProps {
-  label: string;
-  title: string;
-  summary: string;
-  url: string;
+  label?: string | null;
+  title?: string | null;
+  summary?: string | null;
+  url?: string | null;
+  originalUrl?: string | null;
+  finalUrl?: string | null;
+  verdict?: LinkVerdict | null;
   bookmarked?: boolean;
   icon?: boolean;
   disabled?: boolean;
@@ -19,11 +23,46 @@ export interface CardLinkProps {
   onPress?: () => void;
 }
 
+const VERDICT_LABELS: Record<LinkVerdict, string> = {
+  safe: '안전',
+  caution: '주의',
+  danger: '위험',
+};
+
+const VERDICT_COLORS: Record<LinkVerdict, { background: string; text: string }> = {
+  safe: {
+    background: Colors.brand.softMint,
+    text: '#2F6F5F',
+  },
+  caution: {
+    background: '#F5ECC8',
+    text: '#8A6500',
+  },
+  danger: {
+    background: '#F5C8C8',
+    text: Colors.brand.textWarning,
+  },
+};
+
+function normalizeLinkUrl(value?: string | null) {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
+function getFirstText(...values: (string | null | undefined)[]) {
+  return values.find((value) => value?.trim())?.trim();
+}
+
 export function CardLink({
   label,
   title,
   summary,
   url,
+  originalUrl,
+  finalUrl,
+  verdict,
   bookmarked = false,
   icon = true,
   disabled = false,
@@ -32,16 +71,53 @@ export function CardLink({
   onPress,
 }: CardLinkProps) {
   const moreRef = useRef<View>(null);
+  const displayUrl = getFirstText(url, finalUrl, originalUrl) ?? 'URL 정보 없음';
+  const displayTitle = getFirstText(title, summary, displayUrl) ?? '제목 없음';
+  const openUrl = normalizeLinkUrl(getFirstText(finalUrl, originalUrl, url));
+  const normalizedVerdict = verdict && verdict in VERDICT_LABELS ? verdict : undefined;
+  const statusLabel = normalizedVerdict ? VERDICT_LABELS[normalizedVerdict] : (getFirstText(label) ?? '결과 없음');
+  const statusColors = normalizedVerdict ? VERDICT_COLORS[normalizedVerdict] : undefined;
 
-  const handleMorePress = () => {
+  const handleBookmarkPress = (event: GestureResponderEvent) => {
+    event.stopPropagation();
+    onBookmark?.();
+  };
+
+  const handleMorePress = (event: GestureResponderEvent) => {
+    event.stopPropagation();
     moreRef.current?.measure((_fx, _fy, width, height, px, py) => {
       onMore?.({ x: px, y: py, width, height });
     });
   };
 
+  const handleCardPress = async () => {
+    if (disabled) return;
+    if (onPress) {
+      onPress();
+      return;
+    }
+
+    if (!openUrl) {
+      Alert.alert('URL을 열 수 없어요', '저장된 URL 정보가 없습니다.');
+      return;
+    }
+
+    try {
+      const canOpen = await Linking.canOpenURL(openUrl);
+      if (!canOpen) {
+        Alert.alert('URL을 열 수 없어요', '외부 브라우저에서 열 수 없는 주소입니다.');
+        return;
+      }
+
+      await Linking.openURL(openUrl);
+    } catch {
+      Alert.alert('URL을 열 수 없어요', '잠시 후 다시 시도해주세요.');
+    }
+  };
+
   return (
     <Pressable
-      onPress={disabled ? undefined : onPress}
+      onPress={handleCardPress}
       style={({ pressed }) => [
         styles.card,
         disabled && styles.cardDisabled,
@@ -51,17 +127,33 @@ export function CardLink({
       accessibilityState={{ disabled }}
     >
       <View style={styles.topRow}>
-        <Text style={[styles.label, disabled && styles.textDisabled]}>{label}</Text>
+        <View
+          style={[
+            styles.statusBadge,
+            statusColors && { backgroundColor: statusColors.background },
+            disabled && styles.badgeDisabled,
+          ]}
+        >
+          <Text
+            style={[
+              styles.statusLabel,
+              statusColors && { color: statusColors.text },
+              disabled && styles.textDisabled,
+            ]}
+          >
+            {statusLabel}
+          </Text>
+        </View>
         {icon && (
           <View style={styles.iconRow}>
             <Pressable
-              onPress={disabled ? undefined : onBookmark}
+              onPress={disabled ? undefined : handleBookmarkPress}
               hitSlop={8}
               style={({ pressed }) => pressed && !disabled && styles.pressed}
             >
               <IconSymbol
                 name={bookmarked ? 'bookmark.fill' : 'bookmark'}
-                size={20}
+                size={18}
                 color={bookmarked ? Colors.brand.primary : disabled ? Colors.brand.textHint : Colors.brand.textSecondary}
               />
             </Pressable>
@@ -81,21 +173,14 @@ export function CardLink({
         style={[styles.title, disabled && styles.textDisabled]}
         numberOfLines={2}
       >
-        {title}
-      </Text>
-
-      <Text
-        style={[styles.summary, disabled && styles.textDisabled]}
-        numberOfLines={1}
-      >
-        {summary}
+        {displayTitle}
       </Text>
 
       <Text
         style={[styles.url, disabled && styles.textDisabled]}
         numberOfLines={1}
       >
-        {url}
+        {displayUrl}
       </Text>
     </Pressable>
   );
@@ -104,12 +189,20 @@ export function CardLink({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: Colors.brand.line,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 4,
+    shadowColor: Colors.brand.text,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 1,
+    paddingHorizontal: 26,
+    paddingTop: 12,
+    paddingBottom: 20,
+    gap: 10,
+    minHeight: 100,
+    justifyContent: 'space-between',
   },
   cardDisabled: {
     opacity: 0.45,
@@ -122,28 +215,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    minHeight: 22,
   },
   iconRow: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    gap: 10,
   },
 
-  label: {
-    ...Typography.caption,
+  statusBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: 99,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: Colors.brand.line,
+    shadowColor: Colors.brand.text,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.14,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  badgeDisabled: {
+    backgroundColor: Colors.brand.line,
+  },
+  statusLabel: {
+    ...Typography.bold12,
     color: Colors.brand.textSecondary,
   },
   title: {
     ...Typography.section,
+    fontSize: 20,
     color: Colors.brand.text,
-  },
-  summary: {
-    ...Typography.summary,
-    color: Colors.brand.textSecondary,
+    lineHeight: 27,
   },
   url: {
     ...Typography.url,
     color: Colors.brand.textHint,
+    lineHeight: 16,
+    marginTop: 8,
   },
 
   textDisabled: {

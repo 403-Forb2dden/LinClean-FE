@@ -71,10 +71,11 @@ function SelectableCard({ link, selected, onToggle }: SelectableCardProps) {
   return (
     <View style={styles.cardRow}>
       <CardLink
-        label={link.siteName}
+        verdict={link.verdict}
         title={link.title}
-        summary={link.description}
         url={link.originalUrl}
+        originalUrl={link.originalUrl}
+        finalUrl={link.finalUrl}
         bookmarked={link.isBookmarked}
         icon={false}
         onPress={() => onToggle(link.id)}
@@ -256,13 +257,13 @@ const styles = StyleSheet.create({
   // Selectable card
   cardRow: {
     position: 'relative',
-    borderRadius: 12,
+    borderRadius: 22,
     overflow: 'hidden',
   },
   selectedOverlay: {
     position: 'absolute',
     inset: 0,
-    borderRadius: 12,
+    borderRadius: 22,
     backgroundColor: 'rgba(0,0,0,0.08)',
   },
   checkOverlay: {
