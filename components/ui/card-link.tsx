@@ -70,7 +70,7 @@ export function CardLink({
 }: CardLinkProps) {
   const moreRef = useRef<View>(null);
   const displayUrl = getFirstText(finalUrl, originalUrl) ?? 'URL 정보 없음';
-  const displayTitle = getFirstText(title, summary, displayUrl) ?? '제목 없음';
+  const displayTitle = getFirstText(title, summary) ?? '제목 없음';
   const openUrl = normalizeLinkUrl(getFirstText(finalUrl, originalUrl));
   const normalizedVerdict = verdict && verdict in VERDICT_LABELS ? verdict : undefined;
   const statusLabel = normalizedVerdict ? VERDICT_LABELS[normalizedVerdict] : (getFirstText(label) ?? '결과 없음');
