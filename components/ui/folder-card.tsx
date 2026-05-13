@@ -92,7 +92,7 @@ export function FolderCard({
 const styles = StyleSheet.create({
   shadow: {
     borderRadius: 16,
-    shadowColor: '#000',
+    shadowColor: Colors.brand.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 8,

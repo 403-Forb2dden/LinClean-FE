@@ -27,7 +27,7 @@ function CheckIconGraphic({ checked, disabled }: { checked: boolean; disabled: b
 
   return (
     <View style={[styles.iconCircle, { backgroundColor: bgColor }]}>
-      {checked && <CheckMark color={disabled ? Colors.brand.textHint : Colors.light.background} />}
+      {checked && <CheckMark color={disabled ? Colors.brand.textHint : Colors.brand.onPrimary} />}
     </View>
   );
 }
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     height: 9,
     borderBottomWidth: CHECKMARK_THICKNESS,
     borderRightWidth: CHECKMARK_THICKNESS,
-    borderColor: 'white',
+    borderColor: Colors.brand.onPrimary,
     transform: [{ rotate: '45deg' }, { translateY: -2 }],
   },
   label: {

@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Colors, Typography } from '@/constants/theme';
 import { CardLink, type CardLinkProps } from './card-link';
@@ -27,7 +27,7 @@ export function SwipeableCardLink({ onDelete, ...cardLinkProps }: SwipeableCardL
     return (
       <Animated.View style={[styles.deleteContainer, { transform: [{ translateX }] }]}>
         <TouchableOpacity style={styles.deleteButton} onPress={handleDelete} activeOpacity={0.8}>
-          <IconSymbol name="trash" size={20} color="#fff" />
+          <IconSymbol name="trash" size={20} color={Colors.brand.onPrimary} />
           <Text style={styles.deleteText}>{'폴더에서\n삭제'}</Text>
         </TouchableOpacity>
       </Animated.View>
@@ -67,6 +67,6 @@ const styles = StyleSheet.create({
   },
   deleteText: {
     ...Typography.bold12,
-    color: '#fff',
+    color: Colors.brand.onPrimary,
   },
 });

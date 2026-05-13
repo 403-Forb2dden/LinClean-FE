@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
   },
   content: {
     marginHorizontal: 24,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.brand.surface,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: Colors.brand.line,

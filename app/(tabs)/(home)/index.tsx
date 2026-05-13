@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   },
 
   statPlaceholder: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.brand.surface,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.brand.line,

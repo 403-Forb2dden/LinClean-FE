@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1.5,
     borderColor: Colors.brand.line,
-    backgroundColor: Colors.light.background,
+    backgroundColor: Colors.brand.surface,
     paddingHorizontal: 16,
   },
   inputError: {

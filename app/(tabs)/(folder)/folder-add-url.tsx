@@ -9,52 +9,9 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 
 import { Button } from '@/components/ui/button';
 import { CardLink } from '@/components/ui/card-link';
+import { SelectionCircle } from '@/components/ui/selection-circle';
 import { Colors, Typography } from '@/constants/theme';
 import { useSavedLinks, type SavedLink } from '@/context/saved-links-context';
-
-// ─── Selection circle ─────────────────────────────────────────────────────────
-
-function SelectionCircle({ selected }: { selected: boolean }) {
-  return (
-    <View
-      style={[
-        circleStyles.circle,
-        selected ? circleStyles.selected : circleStyles.unselected,
-      ]}
-    >
-      {selected && <View style={circleStyles.checkmark} />}
-    </View>
-  );
-}
-
-const CIRCLE_SIZE = 24;
-
-const circleStyles = StyleSheet.create({
-  circle: {
-    width: CIRCLE_SIZE,
-    height: CIRCLE_SIZE,
-    borderRadius: CIRCLE_SIZE / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  unselected: {
-    backgroundColor: Colors.light.background,
-    borderWidth: 1.5,
-    borderColor: Colors.brand.line,
-  },
-  selected: {
-    backgroundColor: Colors.brand.primary,
-    borderWidth: 0,
-  },
-  checkmark: {
-    width: 5,
-    height: 9,
-    borderBottomWidth: 2,
-    borderRightWidth: 2,
-    borderColor: Colors.light.background,
-    transform: [{ rotate: '45deg' }, { translateY: -2 }],
-  },
-});
 
 // ─── Selectable card row ──────────────────────────────────────────────────────
 
@@ -260,7 +217,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     inset: 0,
     borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.08)',
+    backgroundColor: Colors.brand.overlaySelected,
   },
   checkOverlay: {
     position: 'absolute',
@@ -293,7 +250,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderTopWidth: 1,
     borderTopColor: Colors.brand.line,
-    backgroundColor: Colors.light.background,
+    backgroundColor: Colors.brand.surface,
     gap: 16,
   },
   countBlock: {

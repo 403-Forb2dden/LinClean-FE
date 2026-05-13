@@ -21,7 +21,7 @@ export function Toast({ visible, message, duration = 2500, onHide }: ToastProps)
         Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true }),
       ]).start(() => onHide?.());
     }
-  }, [visible]);
+  }, [duration, onHide, opacity, visible]);
 
   if (!visible) return null;
 
@@ -59,6 +59,6 @@ const styles = StyleSheet.create({
   message: {
     ...Typography.summary,
     fontWeight: '700',
-    color: '#fff',
+    color: Colors.brand.onPrimary,
   },
 });
