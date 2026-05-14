@@ -1,8 +1,5 @@
 export type ScanResultVerdict = 'safe' | 'caution' | 'danger';
 
-// 판정 이유 영역에 표시할 최대 글자 수입니다.
-export const SCAN_REASON_MAX_LENGTH = 100;
-
 // TODO: 검사 결과 화면 UI 확인을 위한 임시 mock 데이터입니다.
 // 백엔드에서 판정 이유(reason)를 내려주면 이 mock 상수와 getMockScanResultReason 호출을 제거합니다.
 const MOCK_SCAN_RESULT_REASONS: Record<ScanResultVerdict, string> = {
@@ -12,5 +9,5 @@ const MOCK_SCAN_RESULT_REASONS: Record<ScanResultVerdict, string> = {
 };
 
 export function getMockScanResultReason(verdict: ScanResultVerdict) {
-  return MOCK_SCAN_RESULT_REASONS[verdict].slice(0, SCAN_REASON_MAX_LENGTH);
+  return MOCK_SCAN_RESULT_REASONS[verdict];
 }

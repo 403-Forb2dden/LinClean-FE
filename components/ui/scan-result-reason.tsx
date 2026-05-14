@@ -9,7 +9,9 @@ export function ScanResultReason({ reason }: ScanResultReasonProps) {
   return (
     <View style={styles.container}>
       <Text style={styles.label}>판정 이유</Text>
-      <Text style={styles.reason}>{reason}</Text>
+      <Text style={styles.reason} numberOfLines={4}>
+        {reason}
+      </Text>
     </View>
   );
 }
