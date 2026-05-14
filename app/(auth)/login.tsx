@@ -1,4 +1,5 @@
 import { useAuth, useSSO } from '@clerk/expo';
+import * as AuthSession from 'expo-auth-session';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
@@ -11,6 +12,10 @@ import { Colors, Typography } from '@/constants/theme';
 import { syncAuthenticatedMember } from '@/services/auth-api';
 
 const IMG_WORDMARK = require('@/assets/images/login_wordmark.png');
+const CLERK_REDIRECT_URL = AuthSession.makeRedirectUri({
+  scheme: 'linclean',
+  path: 'sso-callback',
+});
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -31,6 +36,7 @@ export default function LoginScreen() {
     try {
       const { createdSessionId, setActive } = await startSSOFlow({
         strategy: 'oauth_google',
+        redirectUrl: CLERK_REDIRECT_URL,
       });
 
       if (!createdSessionId || !setActive) {
