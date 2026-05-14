@@ -112,8 +112,7 @@ const styles = StyleSheet.create({
   },
 
   resultTitle: {
-    ...Typography.display,
-    fontSize: 30,
+    ...Typography.displayMedium,
     color: Colors.brand.text,
     textAlign: 'center',
     marginBottom: 10,
