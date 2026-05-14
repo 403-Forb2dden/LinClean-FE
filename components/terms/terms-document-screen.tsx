@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Markdown from 'react-native-markdown-display';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { fetchTerms, type TermsResponse, type TermsType } from '@/api/terms';
+import { fetchTerms, type ContentFormat, type TermsResponse, type TermsType } from '@/api/terms';
 import { AppIcon } from '@/components/ui/app-icon';
 import { Button } from '@/components/ui/button';
 import { Colors, Typography } from '@/constants/theme';
@@ -89,7 +90,7 @@ export function TermsDocumentScreen({ type, fallbackTitle }: TermsDocumentScreen
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.updated}>최종 업데이트: {formatDate(state.data.updatedAt)}</Text>
-          <Text style={styles.body}>{state.data.content}</Text>
+          <TermsContent content={state.data.content} contentFormat={state.data.contentFormat} />
         </ScrollView>
       )}
     </SafeAreaView>
@@ -98,6 +99,22 @@ export function TermsDocumentScreen({ type, fallbackTitle }: TermsDocumentScreen
 
 function isAbortError(error: unknown) {
   return typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError';
+}
+
+interface TermsContentProps {
+  content: string;
+  contentFormat: ContentFormat;
+}
+
+function TermsContent({ content, contentFormat }: TermsContentProps) {
+  switch (contentFormat) {
+    case 'plain_text':
+      return <Text style={styles.body}>{content}</Text>;
+    case 'markdown':
+      return <Markdown style={markdownStyles}>{content}</Markdown>;
+    case 'html':
+      return <Text style={styles.unsupportedText}>지원하지 않는 약관 형식입니다.</Text>;
+  }
 }
 
 function formatDate(value: string) {
@@ -153,6 +170,11 @@ const styles = StyleSheet.create({
     color: Colors.brand.textSecondary,
     lineHeight: 24,
   },
+  unsupportedText: {
+    ...Typography.body,
+    color: Colors.brand.textWarning,
+    lineHeight: 24,
+  },
   centerContent: {
     flex: 1,
     alignItems: 'center',
@@ -170,5 +192,72 @@ const styles = StyleSheet.create({
     color: Colors.brand.textSecondary,
     lineHeight: 20,
     textAlign: 'center',
+  },
+});
+
+const markdownStyles = StyleSheet.create({
+  body: {
+    ...Typography.body,
+    color: Colors.brand.textSecondary,
+    lineHeight: 24,
+  },
+  heading1: {
+    ...Typography.title,
+    color: Colors.brand.text,
+    lineHeight: 30,
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  heading2: {
+    ...Typography.section,
+    color: Colors.brand.text,
+    lineHeight: 26,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  heading3: {
+    ...Typography.profile,
+    color: Colors.brand.text,
+    lineHeight: 24,
+    marginTop: 4,
+    marginBottom: 6,
+  },
+  paragraph: {
+    marginTop: 0,
+    marginBottom: 12,
+    flexWrap: 'wrap',
+    flexDirection: 'row',
+  },
+  bullet_list: {
+    marginBottom: 12,
+  },
+  ordered_list: {
+    marginBottom: 12,
+  },
+  list_item: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+  },
+  bullet_list_icon: {
+    color: Colors.brand.textSecondary,
+    marginRight: 8,
+  },
+  ordered_list_icon: {
+    color: Colors.brand.textSecondary,
+    marginRight: 8,
+  },
+  bullet_list_content: {
+    flex: 1,
+  },
+  ordered_list_content: {
+    flex: 1,
+  },
+  strong: {
+    color: Colors.brand.text,
+    fontWeight: '700',
+  },
+  link: {
+    color: Colors.brand.primaryDeep,
+    textDecorationLine: 'underline',
   },
 });
