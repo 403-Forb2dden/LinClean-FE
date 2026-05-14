@@ -36,7 +36,7 @@ export default function ScanResultBlockScreen() {
         {/* 결과 텍스트 */}
         <Text style={styles.resultTitle}>차단된 위험 링크입니다.</Text>
 
-        <ScanResultReason reason={reason} />
+        <ScanResultReason reason={reason} style={styles.reasonCard} />
 
         {/* 검사 대상 카드 */}
         <View style={styles.card}>
@@ -84,6 +84,9 @@ const styles = StyleSheet.create({
     color: Colors.brand.text,
     textAlign: 'center',
     marginBottom: 10,
+  },
+  reasonCard: {
+    marginBottom: 24,
   },
   card: {
     width: '100%',

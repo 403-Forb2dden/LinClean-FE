@@ -1,17 +1,18 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { Colors, Typography } from '@/constants/theme';
 
 interface ScanResultReasonProps {
   reason: string;
+  style?: StyleProp<ViewStyle>;
 }
 
-export function ScanResultReason({ reason }: ScanResultReasonProps) {
+export function ScanResultReason({ reason, style }: ScanResultReasonProps) {
   const normalizedReason = reason.trim();
 
   if (!normalizedReason) return null;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, style]}>
       <Text style={styles.label}>판정 이유</Text>
       <Text style={styles.reason} numberOfLines={4}>
         {normalizedReason}
@@ -30,7 +31,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 8,
-    marginBottom: 24,
   },
   label: {
     ...Typography.caption,
