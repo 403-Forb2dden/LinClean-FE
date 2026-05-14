@@ -4,8 +4,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { AddFolderButton } from '@/components/ui/add-folder-button';
 import { AppIcon } from '@/components/ui/app-icon';
+import { CardLink } from '@/components/ui/card-link';
 import { FolderContextMenu } from '@/components/ui/folder-context-menu';
-import { SwipeableCardLink } from '@/components/ui/swipeable-card-link';
 import { Toast } from '@/components/ui/toast';
 import { Colors, Typography } from '@/constants/theme';
 import { useSavedLinks } from '@/context/saved-links-context';
@@ -92,7 +92,7 @@ export default function FolderDetailScreen() {
         {folderLinks.length > 0 ? (
           <View style={styles.list}>
             {folderLinks.map((link) => (
-              <SwipeableCardLink
+              <CardLink
                 key={link.id}
                 verdict={link.verdict}
                 title={link.title}
@@ -101,7 +101,6 @@ export default function FolderDetailScreen() {
                 bookmarked={link.isBookmarked}
                 onBookmark={() => toggleBookmark(link.id)}
                 onMore={(anchor: AnchorPosition) => handleMore(link.id, anchor)}
-                onDelete={() => handleDelete(link.id)}
               />
             ))}
           </View>

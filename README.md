@@ -106,7 +106,6 @@ LinClean/
 │       ├── app-icon.tsx                      # 앱 내부에서 재사용하는 아이콘 래퍼
 │       ├── scan-button.tsx                   # URL 스캔 진입용 원형 버튼
 │       ├── card-link.tsx                     # 저장 링크 카드
-│       ├── swipeable-card-link.tsx           # 스와이프 액션을 지원하는 저장 링크 카드
 │       ├── folder-card.tsx                   # 폴더 목록 카드
 │       ├── folder-icon.tsx                   # 폴더 활성/비활성 이미지 아이콘
 │       ├── add-folder-button.tsx             # 폴더 추가 버튼
