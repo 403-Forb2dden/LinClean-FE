@@ -32,14 +32,14 @@ const VARIANT_CONFIG = {
     iconColor: Colors.brand.textWarning,
     glowColor: '#F5C8C8',
     chipBackground: Colors.brand.textWarning,
-    chipTextColor: Colors.brand.text,
+    chipTextColor: Colors.light.background,
   },
   block: {
     iconName: 'shield-remove' as const,
     iconColor: Colors.brand.textWarning,
     glowColor: '#F5C8C8',
     chipBackground: Colors.brand.textWarning,
-    chipTextColor: Colors.brand.text,
+    chipTextColor: Colors.light.background,
   },
 };
 
