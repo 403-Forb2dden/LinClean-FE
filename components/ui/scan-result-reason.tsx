@@ -6,11 +6,15 @@ interface ScanResultReasonProps {
 }
 
 export function ScanResultReason({ reason }: ScanResultReasonProps) {
+  const normalizedReason = reason.trim();
+
+  if (!normalizedReason) return null;
+
   return (
     <View style={styles.container}>
       <Text style={styles.label}>판정 이유</Text>
       <Text style={styles.reason} numberOfLines={4}>
-        {reason}
+        {normalizedReason}
       </Text>
     </View>
   );
