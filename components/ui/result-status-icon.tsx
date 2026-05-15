@@ -15,16 +15,16 @@ interface ResultStatusIconProps {
 const VARIANT_CONFIG = {
   safe: {
     iconName: 'shield-check' as const,
-    iconColor: Colors.brand.primary,
-    glowColor: Colors.brand.softMint,
-    chipBackground: Colors.brand.primary,
+    iconColor: Colors.brand.verdict.safe.accent,
+    glowColor: Colors.brand.verdict.safe.background,
+    chipBackground: Colors.brand.verdict.safe.accent,
     chipTextColor: Colors.brand.text,
   },
   caution: {
     iconName: 'shield-alert' as const,
-    iconColor: Colors.brand.textCaution,
-    glowColor: '#F5ECC8',
-    chipBackground: Colors.brand.textCaution,
+    iconColor: Colors.brand.verdict.caution.accent,
+    glowColor: Colors.brand.verdict.caution.background,
+    chipBackground: Colors.brand.verdict.caution.accent,
     chipTextColor: Colors.brand.text,
   },
   danger: {
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: Colors.brand.overlayInverseSubtle,
   },
   badgeLarge: {
     width: LARGE_BADGE_SIZE,

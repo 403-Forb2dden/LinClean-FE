@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   },
 
   canvas: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.brand.surface,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.brand.line,
@@ -264,10 +264,10 @@ const renameStyles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: Colors.brand.overlayBackdrop,
   },
   sheet: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.brand.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
@@ -338,7 +338,7 @@ const renameStyles = StyleSheet.create({
   confirmText: {
     ...Typography.body,
     fontWeight: '700',
-    color: '#fff',
+    color: Colors.brand.onPrimary,
   },
   confirmTextDisabled: {
     color: Colors.brand.textHint,

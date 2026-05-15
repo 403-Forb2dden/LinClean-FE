@@ -51,7 +51,7 @@ export function Button({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'primary' ? '#fff' : Colors.brand.primary}
+          color={variant === 'primary' ? Colors.brand.onPrimary : Colors.brand.primary}
         />
       ) : (
         <>
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: 'transparent',
+    borderColor: Colors.brand.transparent,
   },
 
   // --- Size variants ---
@@ -114,15 +114,15 @@ const styles = StyleSheet.create({
     borderColor: Colors.brand.softMint,
   },
   variant_secondary: {
-    backgroundColor: 'transparent',
+    backgroundColor: Colors.brand.transparent,
     borderColor: Colors.brand.primary,
   },
   variant_secondary_disabled: {
     borderColor: Colors.brand.line,
   },
   variant_ghost: {
-    backgroundColor: 'transparent',
-    borderColor: 'transparent',
+    backgroundColor: Colors.brand.transparent,
+    borderColor: Colors.brand.transparent,
   },
   variant_ghost_disabled: {},
 
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
 
   // --- Label colors per variant ---
   label_primary: {
-    color: '#fff',
+    color: Colors.brand.onPrimary,
   },
   label_primary_disabled: {
     color: Colors.brand.textHint,
