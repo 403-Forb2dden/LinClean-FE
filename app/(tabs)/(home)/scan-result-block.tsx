@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
 
   card: {
     width: '100%',
-    backgroundColor: Colors.light.background,
+    backgroundColor: Colors.brand.surface,
     borderRadius: 16,
     padding: 16,
     gap: 6,
@@ -121,6 +121,6 @@ const styles = StyleSheet.create({
   },
   confirmButtonText: {
     ...Typography.section,
-    color: '#FFFFFF',
+    color: Colors.brand.onPrimary,
   },
 });

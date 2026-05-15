@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Typography } from '@/constants/theme';
 
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   chipInactive: {
-    backgroundColor: Colors.light.background,
+    backgroundColor: Colors.brand.surface,
     borderColor: Colors.brand.line,
   },
   chipActive: {

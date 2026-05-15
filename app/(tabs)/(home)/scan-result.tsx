@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chip: {
-    backgroundColor: Colors.light.background,
+    backgroundColor: Colors.brand.surface,
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 20,
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   // 검사 대상 카드
   card: {
     width: '100%',
-    backgroundColor: Colors.light.background,
+    backgroundColor: Colors.brand.surface,
     borderRadius: 16,
     padding: 16,
     gap: 6,
@@ -202,13 +202,13 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     ...Typography.section,
-    color: Colors.light.background,
+    color: Colors.brand.onPrimary,
   },
   secondaryButton: {
     width: '100%',
     height: 56,
     borderRadius: 28,
-    backgroundColor: Colors.light.background,
+    backgroundColor: Colors.brand.surface,
     borderWidth: 1.5,
     borderColor: Colors.brand.line,
     alignItems: 'center',

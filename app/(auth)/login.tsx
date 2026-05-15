@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
   },
   kakaoButtonText: {
     ...Typography.section,
-    color: '#000000',
+    color: Colors.kakao.icon,
   },
   terms: {
     ...Typography.url,

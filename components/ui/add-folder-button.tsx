@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: Colors.brand.line,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.brand.surface,
     gap: 2,
   },
   disabled: {
