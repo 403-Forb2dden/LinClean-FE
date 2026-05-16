@@ -1,3 +1,4 @@
+import { useAuth } from '@clerk/expo';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -41,14 +42,18 @@ function SettingRow({ label, onPress, rightText, destructive = false, showChevro
 }
 
 export default function SettingsScreen() {
+  const { signOut } = useAuth();
+
   function handleLogout() {
     Alert.alert('로그아웃', '로그아웃하시겠습니까?', [
       { text: '취소', style: 'cancel' },
       {
         text: '로그아웃',
         style: 'destructive',
-        // TODO: auth 토큰 삭제 후 로그인 화면으로 이동
-        onPress: () => router.replace('/login' as any),
+        onPress: async () => {
+          await signOut();
+          router.replace('/login' as any);
+        },
       },
     ]);
   }

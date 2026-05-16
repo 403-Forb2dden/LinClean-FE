@@ -26,8 +26,11 @@ const selectedOverlayColor = 'rgba(0,0,0,0.08)';
 const modalBackdropColor = 'rgba(0,0,0,0.4)';
 const inverseSubtleOverlayColor = 'rgba(255,255,255,0.08)';
 
-const kakaoButtonColor = '#FEE500';
-const kakaoIconColor = '#000000';
+const socialButtonBackgroundColor = '#FFFFFF';
+const socialButtonBorderColor = lineColor;
+const googleIconColor = '#4285F4';
+const appleButtonBackgroundColor = '#111111';
+const appleButtonTextColor = '#FFFFFF';
 
 export const Colors = {
   light: {
@@ -88,9 +91,12 @@ export const Colors = {
     folderGradientStart: '#8FE2C6',
     folderGradientEnd: '#499B80',
   },
-  kakao: {
-    button: kakaoButtonColor,
-    icon: kakaoIconColor,
+  social: {
+    buttonBackground: socialButtonBackgroundColor,
+    buttonBorder: socialButtonBorderColor,
+    googleIcon: googleIconColor,
+    appleButtonBackground: appleButtonBackgroundColor,
+    appleButtonText: appleButtonTextColor,
   },
 };
 

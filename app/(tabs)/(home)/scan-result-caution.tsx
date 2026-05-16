@@ -13,7 +13,10 @@ export default function ScanResultCautionScreen() {
   const { addLink } = useSavedLinks();
   // TODO: 테스트용 mock 판정 이유입니다. 백엔드 reason 응답 연동 시 제거합니다.
   const reason = getMockScanResultReason('caution');
+  const [saveModalVisible, setSaveModalVisible] = useState(false);
 
+  const handleSave = (title: string) => {
+    const resolvedUrl = url ?? '';
     // TODO: POST /api/v1/saved-links { analysisId } 호출 후 응답으로 교체
     addLink({
       id: Date.now(),

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ResultStatusIcon } from '@/components/ui/result-status-icon';
@@ -19,7 +20,10 @@ export default function ScanResultScreen() {
   const { addLink } = useSavedLinks();
   // TODO: 테스트용 mock 판정 이유입니다. 백엔드 reason 응답 연동 시 제거합니다.
   const reason = getMockScanResultReason('safe');
+  const [saveModalVisible, setSaveModalVisible] = useState(false);
 
+  const handleSave = (title: string) => {
+    const resolvedUrl = url ?? '';
     // TODO: POST /api/v1/saved-links { analysisId } 호출 후 응답으로 교체
     // 현재는 URL 기반 mock 데이터로 즉시 추가
     addLink({
