@@ -36,7 +36,7 @@ export default function HomeScreen() {
           <View style={styles.wordmark}>
             <IconSymbol
               name="checkmark.shield.fill"
-              size={28}
+              size={30}
               color={Colors.brand.primary}
             />
             <Text style={styles.brandText}>LinClean</Text>
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   brandText: {
-    ...Typography.title,
+    ...Typography.displayMedium,
     color: Colors.brand.primary,
   },
 
