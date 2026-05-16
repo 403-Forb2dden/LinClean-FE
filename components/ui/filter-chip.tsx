@@ -73,7 +73,7 @@ const dropdownStyles = StyleSheet.create({
     top: '100%',
     left: 0,
     marginTop: 4,
-    backgroundColor: Colors.light.background,
+    backgroundColor: Colors.brand.surface,
     borderRadius: 10,
     minWidth: 120,
     zIndex: 100,
@@ -189,7 +189,7 @@ const chipStyles = StyleSheet.create({
     borderRadius: 100,
     borderWidth: 1,
     borderColor: Colors.brand.line,
-    backgroundColor: Colors.light.background,
+    backgroundColor: Colors.brand.surface,
   },
   chipDisabled: {
     backgroundColor: Colors.brand.background,

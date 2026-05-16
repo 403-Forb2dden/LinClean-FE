@@ -1,10 +1,14 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Colors, Typography } from '@/constants/theme';
 import { ResultStatusIcon } from '@/components/ui/result-status-icon';
+import { ScanResultReason } from '@/components/ui/scan-result-reason';
+import { getMockScanResultReason } from '@/constants/scan-result-reasons';
+import { Colors, Typography } from '@/constants/theme';
 
 export default function ScanResultBlockScreen() {
   const { url } = useLocalSearchParams<{ url: string }>();
+  // TODO: 테스트용 mock 판정 이유입니다. 백엔드 reason 응답 연동 시 제거합니다.
+  const reason = getMockScanResultReason('danger');
 
   return (
     <>
@@ -26,14 +30,13 @@ export default function ScanResultBlockScreen() {
       >
         {/* 차단 배지 */}
         <View style={styles.badgeArea}>
-          <ResultStatusIcon variant="block" label="차단" />
+          <ResultStatusIcon variant="block" label="차단" size="large" />
         </View>
 
         {/* 결과 텍스트 */}
         <Text style={styles.resultTitle}>차단된 위험 링크입니다.</Text>
-        <Text style={styles.resultSubtitle}>
-          {'고위험 신호가 감지되었습니다.\n해당 링크는 저장할 수 없습니다.'}
-        </Text>
+
+        <ScanResultReason reason={reason} style={styles.reasonCard} />
 
         {/* 검사 대상 카드 */}
         <View style={styles.card}>
@@ -66,45 +69,39 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 40,
+    paddingTop: 4,
+    paddingBottom: 32,
     alignItems: 'center',
   },
 
   badgeArea: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 20,
   },
 
   resultTitle: {
-    ...Typography.display,
+    ...Typography.displayMedium,
     color: Colors.brand.text,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  resultSubtitle: {
-    ...Typography.body,
-    color: Colors.brand.textSecondary,
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 40,
+  reasonCard: {
+    marginBottom: 24,
   },
-
   card: {
     width: '100%',
-    backgroundColor: Colors.light.background,
+    backgroundColor: Colors.brand.surface,
     borderRadius: 16,
     padding: 16,
     gap: 6,
-    marginBottom: 40,
+    marginBottom: 28,
   },
   cardLabel: {
     ...Typography.caption,
     color: Colors.brand.textHint,
   },
   cardUrl: {
-    ...Typography.body,
-    fontWeight: '700',
+    ...Typography.url,
     color: Colors.brand.text,
   },
 
@@ -121,6 +118,6 @@ const styles = StyleSheet.create({
   },
   confirmButtonText: {
     ...Typography.section,
-    color: '#FFFFFF',
+    color: Colors.brand.onPrimary,
   },
 });

@@ -94,10 +94,10 @@ export default function SavedLinksScreen() {
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <CardLink
-            label={item.siteName}
+            verdict={item.verdict}
             title={item.title}
-            summary={item.description}
-            url={item.originalUrl}
+            originalUrl={item.originalUrl}
+            finalUrl={item.finalUrl}
             bookmarked={item.isBookmarked}
             onBookmark={() => toggleBookmark(item.id)}
             onMore={(anchor) => openMoreMenu(item, anchor)}

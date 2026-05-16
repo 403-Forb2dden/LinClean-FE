@@ -1,30 +1,39 @@
+import { useState } from 'react';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Colors, Typography } from '@/constants/theme';
 import { ResultStatusIcon } from '@/components/ui/result-status-icon';
+import { ScanResultReason } from '@/components/ui/scan-result-reason';
+import { getMockScanResultReason } from '@/constants/scan-result-reasons';
+import { Colors, Typography } from '@/constants/theme';
 import { useSavedLinks } from '@/context/saved-links-context';
+import { LinkSaveModal } from '@/components/ui/link-save-modal';
 
 export default function ScanResultCautionScreen() {
   const { url } = useLocalSearchParams<{ url: string }>();
   const { addLink } = useSavedLinks();
+  // TODO: 테스트용 mock 판정 이유입니다. 백엔드 reason 응답 연동 시 제거합니다.
+  const reason = getMockScanResultReason('caution');
+  const [saveModalVisible, setSaveModalVisible] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = (title: string) => {
+    const resolvedUrl = url ?? '';
     // TODO: POST /api/v1/saved-links { analysisId } 호출 후 응답으로 교체
     addLink({
       id: Date.now(),
       analysisId: `mock-${Date.now()}`,
       categoryId: null,
-      originalUrl: url ?? '',
-      finalUrl: url ?? null,
-      title: url ?? '제목 없음',
+      originalUrl: resolvedUrl,
+      finalUrl: resolvedUrl || null,
+      title,
       description: '저장된 링크입니다.',
       siteName: (() => {
-        try { return new URL(url ?? '').hostname; } catch { return '알 수 없음'; }
+        try { return new URL(resolvedUrl).hostname; } catch { return '알 수 없음'; }
       })(),
       verdict: 'caution',
       isBookmarked: false,
       createdAt: new Date().toISOString(),
     });
+    setSaveModalVisible(false);
     router.dismissAll();
   };
 
@@ -58,14 +67,13 @@ export default function ScanResultCautionScreen() {
       >
         {/* 주의 배지 */}
         <View style={styles.badgeArea}>
-          <ResultStatusIcon variant="caution" label="주의" />
+          <ResultStatusIcon variant="caution" label="주의" size="large" />
         </View>
 
         {/* 결과 텍스트 */}
         <Text style={styles.resultTitle}>주의가 필요한 링크입니다.</Text>
-        <Text style={styles.resultSubtitle}>
-          {'의심 신호가 일부 감지됐어요.\n계속 진행할지 한번 더 확인하세요.'}
-        </Text>
+
+        <ScanResultReason reason={reason} style={styles.reasonCard} />
 
         {/* 검사 대상 카드 */}
         <View style={styles.card}>
@@ -77,7 +85,7 @@ export default function ScanResultCautionScreen() {
 
         {/* 버튼 영역 */}
         <View style={styles.buttonArea}>
-          <TouchableOpacity style={styles.cautionButton} onPress={handleSave} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.cautionButton} onPress={() => setSaveModalVisible(true)} activeOpacity={0.8}>
             <Text style={styles.cautionButtonText}>주의 후 저장</Text>
           </TouchableOpacity>
 
@@ -86,6 +94,13 @@ export default function ScanResultCautionScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <LinkSaveModal
+        visible={saveModalVisible}
+        url={url ?? ''}
+        onCancel={() => setSaveModalVisible(false)}
+        onSave={handleSave}
+      />
     </>
   );
 }
@@ -98,45 +113,39 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 40,
+    paddingTop: 4,
+    paddingBottom: 32,
     alignItems: 'center',
   },
 
   badgeArea: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 20,
   },
 
   resultTitle: {
-    ...Typography.display,
+    ...Typography.displayMedium,
     color: Colors.brand.text,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  resultSubtitle: {
-    ...Typography.body,
-    color: Colors.brand.textSecondary,
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 40,
+  reasonCard: {
+    marginBottom: 24,
   },
-
   card: {
     width: '100%',
-    backgroundColor: Colors.light.background,
+    backgroundColor: Colors.brand.surface,
     borderRadius: 16,
     padding: 16,
     gap: 6,
-    marginBottom: 40,
+    marginBottom: 28,
   },
   cardLabel: {
     ...Typography.caption,
     color: Colors.brand.textHint,
   },
   cardUrl: {
-    ...Typography.body,
-    fontWeight: '700',
+    ...Typography.url,
     color: Colors.brand.text,
   },
 
@@ -160,7 +169,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 56,
     borderRadius: 28,
-    backgroundColor: Colors.light.background,
+    backgroundColor: Colors.brand.surface,
     borderWidth: 1.5,
     borderColor: Colors.brand.line,
     alignItems: 'center',

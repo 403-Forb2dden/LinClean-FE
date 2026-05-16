@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   group: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.brand.surface,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: Colors.brand.line,

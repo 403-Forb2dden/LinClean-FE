@@ -116,11 +116,11 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.brand.surface,
     borderRadius: 16,
     padding: 20,
     gap: 12,
-    shadowColor: '#000',
+    shadowColor: Colors.brand.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
