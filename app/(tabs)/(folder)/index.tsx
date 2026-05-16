@@ -142,7 +142,7 @@ export default function FolderScreen() {
       >
         <KeyboardAvoidingView
           style={renameStyles.overlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <Pressable style={renameStyles.backdrop} onPress={handleRenameCancel} />
           <View style={renameStyles.sheet}>

@@ -1,30 +1,36 @@
+import { useState } from 'react';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors, Typography } from '@/constants/theme';
 import { ResultStatusIcon } from '@/components/ui/result-status-icon';
 import { useSavedLinks } from '@/context/saved-links-context';
+import { LinkSaveModal } from '@/components/ui/link-save-modal';
 
 export default function ScanResultCautionScreen() {
   const { url } = useLocalSearchParams<{ url: string }>();
   const { addLink } = useSavedLinks();
+  const [saveModalVisible, setSaveModalVisible] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = (title: string) => {
+    const resolvedUrl = url ?? '';
+
     // TODO: POST /api/v1/saved-links { analysisId } 호출 후 응답으로 교체
     addLink({
       id: Date.now(),
       analysisId: `mock-${Date.now()}`,
       categoryId: null,
-      originalUrl: url ?? '',
-      finalUrl: url ?? null,
-      title: url ?? '제목 없음',
+      originalUrl: resolvedUrl,
+      finalUrl: resolvedUrl || null,
+      title,
       description: '저장된 링크입니다.',
       siteName: (() => {
-        try { return new URL(url ?? '').hostname; } catch { return '알 수 없음'; }
+        try { return new URL(resolvedUrl).hostname; } catch { return '알 수 없음'; }
       })(),
       verdict: 'caution',
       isBookmarked: false,
       createdAt: new Date().toISOString(),
     });
+    setSaveModalVisible(false);
     router.dismissAll();
   };
 
@@ -77,7 +83,7 @@ export default function ScanResultCautionScreen() {
 
         {/* 버튼 영역 */}
         <View style={styles.buttonArea}>
-          <TouchableOpacity style={styles.cautionButton} onPress={handleSave} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.cautionButton} onPress={() => setSaveModalVisible(true)} activeOpacity={0.8}>
             <Text style={styles.cautionButtonText}>주의 후 저장</Text>
           </TouchableOpacity>
 
@@ -86,6 +92,13 @@ export default function ScanResultCautionScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <LinkSaveModal
+        visible={saveModalVisible}
+        url={url ?? ''}
+        onCancel={() => setSaveModalVisible(false)}
+        onSave={handleSave}
+      />
     </>
   );
 }
