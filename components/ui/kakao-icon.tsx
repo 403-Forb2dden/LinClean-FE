@@ -34,8 +34,8 @@ export function KakaoIcon({ size = 24, color = Colors.kakao.icon }: KakaoIconPro
           borderLeftWidth: tailW / 2,
           borderRightWidth: tailW / 2,
           borderTopWidth: tailH,
-          borderLeftColor: 'transparent',
-          borderRightColor: 'transparent',
+          borderLeftColor: Colors.brand.transparent,
+          borderRightColor: Colors.brand.transparent,
           borderTopColor: color,
         }}
       />

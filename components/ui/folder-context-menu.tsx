@@ -89,10 +89,10 @@ const styles = StyleSheet.create({
   menu: {
     position: 'absolute',
     width: MENU_WIDTH,
-    backgroundColor: Colors.light.background,
+    backgroundColor: Colors.brand.surface,
     borderRadius: 12,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: Colors.brand.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 12,

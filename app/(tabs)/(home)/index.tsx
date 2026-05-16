@@ -70,10 +70,10 @@ export default function HomeScreen() {
             {recentLinks.map((link) => (
               <CardLink
                 key={link.id}
-                label={link.siteName}
+                verdict={link.verdict}
                 title={link.title}
-                summary={link.description}
-                url={link.originalUrl}
+                originalUrl={link.originalUrl}
+                finalUrl={link.finalUrl}
                 bookmarked={link.isBookmarked}
                 onBookmark={() => toggleBookmark(link.id)}
                 onMore={(anchor) => handleMore(link.id, anchor)}
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   },
 
   statPlaceholder: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.brand.surface,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.brand.line,

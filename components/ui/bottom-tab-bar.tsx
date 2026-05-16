@@ -72,7 +72,7 @@ export function BottomTabItem({
       >
         {showIcon && (
           <View style={[styles.addLinkCircle, disabled && styles.addLinkCircleDisabled]}>
-            <IconSymbol name="link.badge.plus" size={24} color="#FFFFFF" />
+            <IconSymbol name="link.badge.plus" size={24} color={Colors.brand.onPrimary} />
           </View>
         )}
         <Text
@@ -163,7 +163,7 @@ export function BottomTabBar({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.brand.surface,
   },
   border: {
     height: StyleSheet.hairlineWidth,
