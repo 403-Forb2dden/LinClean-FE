@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    ...Typography.title,
+    ...Typography.pageTitle,
     color: Colors.brand.text,
   },
   subtitle: {
