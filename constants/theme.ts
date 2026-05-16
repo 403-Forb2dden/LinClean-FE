@@ -135,6 +135,7 @@ export const Fonts = {
 const fontSizeDisplay = 32;
 const fontSizeDisplayMedium = 30;
 const fontSizeTitle = 22;
+const fontSizeSectionTitle = 20;
 const fontSizeSection = 18;
 const fontSizeProfile = 17;
 const fontSizeBody = 16;
@@ -152,6 +153,7 @@ export const Typography = {
   display: { fontSize: fontSizeDisplay, fontWeight: fontWeightBold },
   displayMedium: { fontSize: fontSizeDisplayMedium, fontWeight: fontWeightBold },
   title: { fontSize: fontSizeTitle, fontWeight: fontWeightBold },
+  sectionTitle: { fontSize: fontSizeSectionTitle, fontWeight: fontWeightBold },
   section: { fontSize: fontSizeSection, fontWeight: fontWeightBold },
   profile: { fontSize: fontSizeProfile, fontWeight: fontWeightBold },
   body: { fontSize: fontSizeBody, fontWeight: fontWeightRegular },
