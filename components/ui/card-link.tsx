@@ -30,13 +30,6 @@ const VERDICT_LABELS: Record<LinkVerdict, string> = {
 
 const VERDICT_COLORS: Record<LinkVerdict, { background: string; text: string }> = Colors.brand.verdict;
 
-function normalizeLinkUrl(value?: string | null) {
-  const trimmed = value?.trim();
-  if (!trimmed) return null;
-  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) return trimmed;
-  return `https://${trimmed}`;
-}
-
 function getFirstText(...values: (string | null | undefined)[]) {
   return values.find((value) => value?.trim())?.trim();
 }
@@ -58,7 +51,7 @@ export function CardLink({
   const moreRef = useRef<View>(null);
   const displayUrl = getFirstText(finalUrl, originalUrl) ?? 'URL 정보 없음';
   const displayTitle = getFirstText(title, summary) ?? '제목 없음';
-  const openUrl = normalizeLinkUrl(getFirstText(finalUrl, originalUrl));
+  const openUrl = getFirstText(finalUrl, originalUrl);
   const normalizedVerdict = verdict && verdict in VERDICT_LABELS ? verdict : undefined;
   const statusLabel = normalizedVerdict ? VERDICT_LABELS[normalizedVerdict] : (getFirstText(label) ?? '결과 없음');
   const statusColors = normalizedVerdict ? VERDICT_COLORS[normalizedVerdict] : undefined;
@@ -88,12 +81,6 @@ export function CardLink({
     }
 
     try {
-      const canOpen = await Linking.canOpenURL(openUrl);
-      if (!canOpen) {
-        Alert.alert('URL을 열 수 없어요', '외부 브라우저에서 열 수 없는 주소입니다.');
-        return;
-      }
-
       await Linking.openURL(openUrl);
     } catch {
       Alert.alert('URL을 열 수 없어요', '잠시 후 다시 시도해주세요.');
