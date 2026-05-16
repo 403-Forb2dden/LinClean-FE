@@ -20,7 +20,7 @@ export default function ScanningScreen() {
     //   caution → '/(tabs)/(home)/scan-result-caution'
     //   block   → '/(tabs)/(home)/scan-result-block'
     const timer = setTimeout(() => {
-      router.replace({ pathname: '/(tabs)/(home)/scan-result', params: { url } });
+      router.replace({ pathname: '/(tabs)/(home)/scan-result-block', params: { url } });
     }, 3000);
     return () => clearTimeout(timer);
   }, [url]);

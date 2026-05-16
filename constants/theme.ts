@@ -127,6 +127,7 @@ export const Fonts = {
 
 // Font size tokens (from Figma Design System)
 const fontSizeDisplay = 32;
+const fontSizeDisplayMedium = 30;
 const fontSizeTitle = 22;
 const fontSizeSection = 18;
 const fontSizeProfile = 17;
@@ -143,6 +144,7 @@ const fontWeightRegular = '400' as const;
 
 export const Typography = {
   display: { fontSize: fontSizeDisplay, fontWeight: fontWeightBold },
+  displayMedium: { fontSize: fontSizeDisplayMedium, fontWeight: fontWeightBold },
   title: { fontSize: fontSizeTitle, fontWeight: fontWeightBold },
   section: { fontSize: fontSizeSection, fontWeight: fontWeightBold },
   profile: { fontSize: fontSizeProfile, fontWeight: fontWeightBold },

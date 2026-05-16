@@ -86,7 +86,7 @@ function VerdictRow({ color, label, desc }: { color: string; label: string; desc
     <View style={verdictStyles.row}>
       <View style={[verdictStyles.dot, { backgroundColor: color }]} />
       <View style={verdictStyles.body}>
-        <Text style={[verdictStyles.label, { color }]}>{label}</Text>
+        <Text style={verdictStyles.label}>{label}</Text>
         <Text style={verdictStyles.desc}>{desc}</Text>
       </View>
     </View>
@@ -111,6 +111,7 @@ const verdictStyles = StyleSheet.create({
   },
   label: {
     ...Typography.profile,
+    color: Colors.brand.text,
   },
   desc: {
     ...Typography.summary,
