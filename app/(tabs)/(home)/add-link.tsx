@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
-  Linking,
   Platform,
   StyleSheet,
   Text,
@@ -15,14 +13,35 @@ import { Stack, router } from 'expo-router';
 import { ScanButton } from '@/components/ui/scan-button';
 import { Colors, Typography } from '@/constants/theme';
 
+function getRawHostname(value: string): string | null {
+  const authority = value.match(/^https?:\/\/([^/?#]+)/i)?.[1];
+  if (!authority) return null;
+
+  return authority.split('@').pop()?.split(':')[0] ?? null;
+}
+
+function isValidHostname(hostname: string): boolean {
+  const labels = hostname.split('.');
+  if (labels.length < 2) return false;
+  if (labels.some((label) => !label)) return false;
+
+  const tld = labels[labels.length - 1];
+  if (!/^[a-z]{2,}$/i.test(tld)) return false;
+
+  return labels.every((label) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(label));
+}
+
 function isValidUrlFormat(value: string): boolean {
   const trimmed = value.trim();
-  if (!/^https?:\/\//i.test(trimmed)) return false;
+  if (!trimmed || /\s/.test(trimmed)) return false;
+
+  const candidate = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  const rawHostname = getRawHostname(candidate);
+  if (!rawHostname || !isValidHostname(rawHostname)) return false;
+
   try {
-    const parsed = new URL(trimmed);
-    const parts = parsed.hostname.split('.');
-    const tld = parts[parts.length - 1];
-    return parts.length >= 2 && tld.length >= 2;
+    const parsed = new URL(candidate);
+    return isValidHostname(parsed.hostname);
   } catch {
     return false;
   }
@@ -31,9 +50,8 @@ function isValidUrlFormat(value: string): boolean {
 export default function AddLinkScreen() {
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
-  const [isChecking, setIsChecking] = useState(false);
 
-  const handleScan = async () => {
+  const handleScan = () => {
     const trimmed = url.trim();
 
     if (!trimmed) {
@@ -41,27 +59,13 @@ export default function AddLinkScreen() {
       return;
     }
 
-    // 1단계: new URL()로 형식 검증
     if (!isValidUrlFormat(trimmed)) {
       setError('올바르지 않은 URL 입력입니다.');
       return;
     }
 
-    // 2단계: Linking.canOpenURL()로 실제 열기 가능 여부 확인
-    setIsChecking(true);
-    try {
-      const canOpen = await Linking.canOpenURL(trimmed);
-      if (!canOpen) {
-        setError('올바르지 않은 URL 입력입니다.');
-        return;
-      }
-      setError('');
-      router.push({ pathname: '/(tabs)/(home)/scanning', params: { url: trimmed } });
-    } catch {
-      setError('URL 확인 중 오류가 발생했습니다.');
-    } finally {
-      setIsChecking(false);
-    }
+    setError('');
+    router.push({ pathname: '/(tabs)/(home)/scanning', params: { url: trimmed } });
   };
 
   const handleChangeUrl = (value: string) => {
@@ -70,7 +74,7 @@ export default function AddLinkScreen() {
   };
 
   const hasError = error.length > 0;
-  const scanDisabled = !url.trim() || isChecking;
+  const scanDisabled = !url.trim();
 
   return (
     <>
@@ -118,9 +122,8 @@ export default function AddLinkScreen() {
                   keyboardType="url"
                   returnKeyType="search"
                   onSubmitEditing={handleScan}
-                  editable={!isChecking}
                 />
-                {url.length > 0 && !isChecking && (
+                {url.length > 0 && (
                   <TouchableOpacity
                     onPress={() => { setUrl(''); setError(''); }}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -130,13 +133,7 @@ export default function AddLinkScreen() {
                   </TouchableOpacity>
                 )}
               </View>
-              {isChecking ? (
-                <View style={styles.loadingBox}>
-                  <ActivityIndicator size="small" color={Colors.brand.primary} />
-                </View>
-              ) : (
-                <ScanButton onPress={handleScan} disabled={scanDisabled} />
-              )}
+              <ScanButton onPress={handleScan} disabled={scanDisabled} />
             </View>
 
             {/* 에러 메시지 */}
@@ -232,17 +229,6 @@ const styles = StyleSheet.create({
     color: Colors.brand.primary,
     lineHeight: 16,
   },
-  loadingBox: {
-    width: 60,
-    height: 60,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: Colors.brand.line,
-    backgroundColor: Colors.brand.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
   // 에러
   errorText: {
     ...Typography.body,
