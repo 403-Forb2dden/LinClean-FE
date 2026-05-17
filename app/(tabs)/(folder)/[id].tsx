@@ -75,7 +75,9 @@ export default function FolderDetailScreen() {
           <View style={styles.canvasHeader}>
             <View style={styles.folderTitleGroup}>
               <Text style={styles.folderTitleLabel}>현재 폴더</Text>
-              <Text style={styles.folderName}>{folderName}</Text>
+              <Text style={styles.folderName} numberOfLines={1} ellipsizeMode="tail">
+                {folderName}
+              </Text>
             </View>
             <AddFolderButton label="URL 추가" onPress={handleAddUrl} />
           </View>
@@ -181,9 +183,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
     paddingVertical: 4,
   },
   folderTitleGroup: {
+    flex: 1,
+    minWidth: 0,
     gap: 4,
     marginLeft: 10,
   },
