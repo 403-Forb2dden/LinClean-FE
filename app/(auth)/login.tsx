@@ -2,6 +2,7 @@ import { useAuth, useSSO } from '@clerk/expo';
 import * as AuthSession from 'expo-auth-session';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
+import { useShareIntentContext } from 'expo-share-intent';
 import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
@@ -10,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SocialLoginButton } from '@/components/ui/social-login-button';
 import { Colors, Typography } from '@/constants/theme';
 import { syncAuthenticatedMember } from '@/services/auth-api';
+import { getSharedUrlFromIntent } from '@/utils/shared-url';
 
 const IMG_WORDMARK = require('@/assets/images/login_wordmark.png');
 const CLERK_REDIRECT_URL = AuthSession.makeRedirectUri({
@@ -23,6 +25,7 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { getToken, signOut } = useAuth();
   const { startSSOFlow } = useSSO();
+  const { hasShareIntent, resetShareIntent, shareIntent } = useShareIntentContext();
   const [isSigningIn, setIsSigningIn] = useState(false);
 
   const handleGoogleLogin = async () => {
@@ -46,7 +49,22 @@ export default function LoginScreen() {
       await setActive({ session: createdSessionId });
       sessionActivated = true;
       await syncAuthenticatedMember(getToken);
-      router.replace('/(tabs)/(home)');
+
+      const sharedUrl = hasShareIntent ? getSharedUrlFromIntent(shareIntent) : null;
+
+      if (sharedUrl) {
+        router.replace({
+          pathname: '/(tabs)/(home)/add-link',
+          params: { sharedUrl },
+        });
+        resetShareIntent(true);
+      } else {
+        if (hasShareIntent) {
+          resetShareIntent(true);
+        }
+
+        router.replace('/(tabs)/(home)');
+      }
     } catch (error) {
       console.error(error);
 

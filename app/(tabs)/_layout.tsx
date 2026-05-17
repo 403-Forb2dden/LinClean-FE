@@ -3,6 +3,7 @@ import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Redirect, router, Tabs } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 
+import { ShareIntentRouter } from '@/components/share-intent-router';
 import { BottomTabBar, type TabVariant } from '@/components/ui/bottom-tab-bar';
 import { SavedLinksProvider } from '@/context/saved-links-context';
 import { syncAuthenticatedMember } from '@/services/auth-api';
@@ -120,6 +121,7 @@ export default function TabLayout() {
 
   return (
     <SavedLinksProvider>
+      <ShareIntentRouter />
       <Tabs
         tabBar={(props) => <CustomTabBar {...props} />}
         screenOptions={{ headerShown: false }}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -10,28 +10,37 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Stack, router } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 
 import { ScanButton } from '@/components/ui/scan-button';
 import { Colors, Typography } from '@/constants/theme';
+import { normalizeHttpUrlInput } from '@/utils/shared-url';
 
-function isValidUrlFormat(value: string): boolean {
-  const trimmed = value.trim();
-  if (!/^https?:\/\//i.test(trimmed)) return false;
-  try {
-    const parsed = new URL(trimmed);
-    const parts = parsed.hostname.split('.');
-    const tld = parts[parts.length - 1];
-    return parts.length >= 2 && tld.length >= 2;
-  } catch {
-    return false;
+function getSharedUrlParam(value: string | string[] | undefined): string {
+  if (typeof value !== 'string') {
+    return '';
   }
+
+  return normalizeHttpUrlInput(value) ?? '';
 }
 
 export default function AddLinkScreen() {
-  const [url, setUrl] = useState('');
+  const { sharedUrl } = useLocalSearchParams<{ sharedUrl?: string }>();
+  const initialSharedUrl = getSharedUrlParam(sharedUrl);
+  const [url, setUrl] = useState(initialSharedUrl);
   const [error, setError] = useState('');
   const [isChecking, setIsChecking] = useState(false);
+
+  useEffect(() => {
+    const nextSharedUrl = getSharedUrlParam(sharedUrl);
+
+    if (!nextSharedUrl) {
+      return;
+    }
+
+    setUrl(nextSharedUrl);
+    setError('');
+  }, [sharedUrl]);
 
   const handleScan = async () => {
     const trimmed = url.trim();
@@ -42,7 +51,9 @@ export default function AddLinkScreen() {
     }
 
     // 1단계: new URL()로 형식 검증
-    if (!isValidUrlFormat(trimmed)) {
+    const normalizedUrl = normalizeHttpUrlInput(trimmed);
+
+    if (!normalizedUrl) {
       setError('올바르지 않은 URL 입력입니다.');
       return;
     }
@@ -50,13 +61,13 @@ export default function AddLinkScreen() {
     // 2단계: Linking.canOpenURL()로 실제 열기 가능 여부 확인
     setIsChecking(true);
     try {
-      const canOpen = await Linking.canOpenURL(trimmed);
+      const canOpen = await Linking.canOpenURL(normalizedUrl);
       if (!canOpen) {
         setError('올바르지 않은 URL 입력입니다.');
         return;
       }
       setError('');
-      router.push({ pathname: '/(tabs)/(home)/scanning', params: { url: trimmed } });
+      router.push({ pathname: '/(tabs)/(home)/scanning', params: { url: normalizedUrl } });
     } catch {
       setError('URL 확인 중 오류가 발생했습니다.');
     } finally {

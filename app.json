@@ -29,6 +29,20 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-share-intent",
+        {
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsText": true,
+            "NSExtensionActivationSupportsWebURLWithMaxCount": 1,
+            "NSExtensionActivationSupportsWebPageWithMaxCount": 1
+          },
+          "iosShareExtensionName": "LinCleanShareExtension",
+          "androidIntentFilters": [
+            "text/*"
+          ]
+        }
+      ],
       "./plugins/with-android-single-task",
       [
         "expo-splash-screen",

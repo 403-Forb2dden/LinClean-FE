@@ -1,0 +1,19 @@
+diff --git a/node_modules/expo-share-intent/build/useShareIntent.js b/node_modules/expo-share-intent/build/useShareIntent.js
+index 1ab12c4..d15ad05 100644
+--- a/node_modules/expo-share-intent/build/useShareIntent.js
++++ b/node_modules/expo-share-intent/build/useShareIntent.js
+@@ -50,12 +50,12 @@ export default function useShareIntent(options = SHAREINTENT_OPTIONS_DEFAULT) {
+         }
+     };
+     useEffect(() => {
+-        if (options.disabled)
++        if (options.disabled || !isReady)
+             return;
+         options.debug &&
+             console.debug("useShareIntent[mount]", getScheme(options), options);
+         refreshShareIntent();
+-    }, [url, options.disabled]);
++    }, [url, options.disabled, isReady]);
+     /**
+      * Handle application state (active, background, inactive)
+      */
