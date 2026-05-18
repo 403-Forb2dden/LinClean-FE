@@ -7,17 +7,35 @@ function trimUrlCandidate(value: string): string {
   return value.trim().replace(TRAILING_PUNCTUATION_PATTERN, '');
 }
 
-function hasValidHostname(hostname: string): boolean {
-  const parts = hostname.split('.');
-  const tld = parts[parts.length - 1];
+function getRawHostname(value: string): string | null {
+  const authority = value.match(/^https?:\/\/([^/?#]+)/i)?.[1];
+  if (!authority) return null;
 
-  return parts.length >= 2 && tld.length >= 2;
+  return authority.split('@').pop()?.split(':')[0] ?? null;
+}
+
+function hasValidHostname(hostname: string): boolean {
+  const labels = hostname.split('.');
+  if (labels.length < 2) return false;
+  if (labels.some((label) => !label)) return false;
+
+  const tld = labels[labels.length - 1];
+  if (!/^[a-z]{2,}$/i.test(tld)) return false;
+
+  return labels.every((label) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(label));
 }
 
 export function normalizeHttpUrlInput(value: string): string | null {
-  const candidate = trimUrlCandidate(value);
+  const trimmed = trimUrlCandidate(value);
 
-  if (!/^https?:\/\//i.test(candidate)) {
+  if (!trimmed || /\s/.test(trimmed)) {
+    return null;
+  }
+
+  const candidate = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  const rawHostname = getRawHostname(candidate);
+
+  if (!rawHostname || !hasValidHostname(rawHostname)) {
     return null;
   }
 

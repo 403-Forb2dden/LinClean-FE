@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
-  Linking,
   Platform,
   StyleSheet,
   Text,
@@ -29,7 +27,6 @@ export default function AddLinkScreen() {
   const initialSharedUrl = getSharedUrlParam(sharedUrl);
   const [url, setUrl] = useState(initialSharedUrl);
   const [error, setError] = useState('');
-  const [isChecking, setIsChecking] = useState(false);
 
   useEffect(() => {
     const nextSharedUrl = getSharedUrlParam(sharedUrl);
@@ -42,7 +39,7 @@ export default function AddLinkScreen() {
     setError('');
   }, [sharedUrl]);
 
-  const handleScan = async () => {
+  const handleScan = () => {
     const trimmed = url.trim();
 
     if (!trimmed) {
@@ -58,21 +55,8 @@ export default function AddLinkScreen() {
       return;
     }
 
-    // 2단계: Linking.canOpenURL()로 실제 열기 가능 여부 확인
-    setIsChecking(true);
-    try {
-      const canOpen = await Linking.canOpenURL(normalizedUrl);
-      if (!canOpen) {
-        setError('올바르지 않은 URL 입력입니다.');
-        return;
-      }
-      setError('');
-      router.push({ pathname: '/(tabs)/(home)/scanning', params: { url: normalizedUrl } });
-    } catch {
-      setError('URL 확인 중 오류가 발생했습니다.');
-    } finally {
-      setIsChecking(false);
-    }
+    setError('');
+    router.push({ pathname: '/(tabs)/(home)/scanning', params: { url: normalizedUrl } });
   };
 
   const handleChangeUrl = (value: string) => {
@@ -81,7 +65,7 @@ export default function AddLinkScreen() {
   };
 
   const hasError = error.length > 0;
-  const scanDisabled = !url.trim() || isChecking;
+  const scanDisabled = !url.trim();
 
   return (
     <>
@@ -129,9 +113,8 @@ export default function AddLinkScreen() {
                   keyboardType="url"
                   returnKeyType="search"
                   onSubmitEditing={handleScan}
-                  editable={!isChecking}
                 />
-                {url.length > 0 && !isChecking && (
+                {url.length > 0 && (
                   <TouchableOpacity
                     onPress={() => { setUrl(''); setError(''); }}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -141,13 +124,7 @@ export default function AddLinkScreen() {
                   </TouchableOpacity>
                 )}
               </View>
-              {isChecking ? (
-                <View style={styles.loadingBox}>
-                  <ActivityIndicator size="small" color={Colors.brand.primary} />
-                </View>
-              ) : (
-                <ScanButton onPress={handleScan} disabled={scanDisabled} />
-              )}
+              <ScanButton onPress={handleScan} disabled={scanDisabled} />
             </View>
 
             {/* 에러 메시지 */}
@@ -243,17 +220,6 @@ const styles = StyleSheet.create({
     color: Colors.brand.primary,
     lineHeight: 16,
   },
-  loadingBox: {
-    width: 60,
-    height: 60,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: Colors.brand.line,
-    backgroundColor: Colors.brand.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
   // 에러
   errorText: {
     ...Typography.body,
