@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -8,48 +8,36 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Stack, router } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 
 import { ScanButton } from '@/components/ui/scan-button';
 import { Colors, Typography } from '@/constants/theme';
+import { normalizeHttpUrlInput } from '@/utils/shared-url';
 
-function getRawHostname(value: string): string | null {
-  const authority = value.match(/^https?:\/\/([^/?#]+)/i)?.[1];
-  if (!authority) return null;
-
-  return authority.split('@').pop()?.split(':')[0] ?? null;
-}
-
-function isValidHostname(hostname: string): boolean {
-  const labels = hostname.split('.');
-  if (labels.length < 2) return false;
-  if (labels.some((label) => !label)) return false;
-
-  const tld = labels[labels.length - 1];
-  if (!/^[a-z]{2,}$/i.test(tld)) return false;
-
-  return labels.every((label) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(label));
-}
-
-function isValidUrlFormat(value: string): boolean {
-  const trimmed = value.trim();
-  if (!trimmed || /\s/.test(trimmed)) return false;
-
-  const candidate = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-  const rawHostname = getRawHostname(candidate);
-  if (!rawHostname || !isValidHostname(rawHostname)) return false;
-
-  try {
-    const parsed = new URL(candidate);
-    return isValidHostname(parsed.hostname);
-  } catch {
-    return false;
+function getSharedUrlParam(value: string | string[] | undefined): string {
+  if (typeof value !== 'string') {
+    return '';
   }
+
+  return normalizeHttpUrlInput(value) ?? '';
 }
 
 export default function AddLinkScreen() {
-  const [url, setUrl] = useState('');
+  const { sharedUrl } = useLocalSearchParams<{ sharedUrl?: string }>();
+  const initialSharedUrl = getSharedUrlParam(sharedUrl);
+  const [url, setUrl] = useState(initialSharedUrl);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const nextSharedUrl = getSharedUrlParam(sharedUrl);
+
+    if (!nextSharedUrl) {
+      return;
+    }
+
+    setUrl(nextSharedUrl);
+    setError('');
+  }, [sharedUrl]);
 
   const handleScan = () => {
     const trimmed = url.trim();
@@ -59,13 +47,16 @@ export default function AddLinkScreen() {
       return;
     }
 
-    if (!isValidUrlFormat(trimmed)) {
+    // 1단계: new URL()로 형식 검증
+    const normalizedUrl = normalizeHttpUrlInput(trimmed);
+
+    if (!normalizedUrl) {
       setError('올바르지 않은 URL 입력입니다.');
       return;
     }
 
     setError('');
-    router.push({ pathname: '/(tabs)/(home)/scanning', params: { url: trimmed } });
+    router.push({ pathname: '/(tabs)/(home)/scanning', params: { url: normalizedUrl } });
   };
 
   const handleChangeUrl = (value: string) => {
