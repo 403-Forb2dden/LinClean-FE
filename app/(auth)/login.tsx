@@ -52,17 +52,16 @@ export default function LoginScreen() {
 
       const sharedUrl = hasShareIntent ? getSharedUrlFromIntent(shareIntent) : null;
 
+      if (hasShareIntent) {
+        resetShareIntent(true);
+      }
+
       if (sharedUrl) {
         router.replace({
           pathname: '/(tabs)/(home)/add-link',
           params: { sharedUrl },
         });
-        resetShareIntent(true);
       } else {
-        if (hasShareIntent) {
-          resetShareIntent(true);
-        }
-
         router.replace('/(tabs)/(home)');
       }
     } catch (error) {
