@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { AddFolderButton } from '@/components/ui/add-folder-button';
 import { FolderCard } from '@/components/ui/folder-card';
 import { FolderContextMenu } from '@/components/ui/folder-context-menu';
+import { SectionHeader } from '@/components/ui/section-header';
 import { Colors, Typography } from '@/constants/theme';
 import type { AnchorPosition } from '@/components/ui/folder-card';
 import { useSavedLinks } from '@/context/saved-links-context';
@@ -97,10 +98,10 @@ export default function FolderScreen() {
 
         {/* 폴더 캔버스 */}
         <View style={styles.canvas}>
-          <View style={styles.canvasHeader}>
-            <Text style={styles.canvasTitle}>내 폴더</Text>
-            <AddFolderButton onPress={handleAddFolder} />
-          </View>
+          <SectionHeader
+            label="내 폴더"
+            rightSlot={<AddFolderButton onPress={handleAddFolder} />}
+          />
 
           {folders.length > 0 ? (
             <View style={styles.grid}>
@@ -210,7 +211,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    ...Typography.title,
+    ...Typography.pageTitle,
     color: Colors.brand.text,
   },
   subtitle: {
@@ -226,16 +227,6 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 16,
   },
-  canvasHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  canvasTitle: {
-    ...Typography.title,
-    color: Colors.brand.text,
-  },
-
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

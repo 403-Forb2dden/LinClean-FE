@@ -58,6 +58,7 @@ const styles = StyleSheet.create({
   },
   message: {
     ...Typography.summary,
+    lineHeight: 20,
     fontWeight: '700',
     color: Colors.brand.onPrimary,
   },

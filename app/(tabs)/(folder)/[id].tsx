@@ -73,7 +73,12 @@ export default function FolderDetailScreen() {
         {/* 폴더명 + URL 추가 버튼 */}
         <View style={styles.canvasHeaderWrapper}>
           <View style={styles.canvasHeader}>
-            <Text style={styles.folderName}>{folderName}</Text>
+            <View style={styles.folderTitleGroup}>
+              <Text style={styles.folderTitleLabel}>현재 폴더</Text>
+              <Text style={styles.folderName} numberOfLines={1} ellipsizeMode="tail">
+                {folderName}
+              </Text>
+            </View>
             <AddFolderButton label="URL 추가" onPress={handleAddUrl} />
           </View>
           <Toast
@@ -154,7 +159,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerTitle: {
-    ...Typography.title,
+    ...Typography.pageTitle,
     color: Colors.brand.text,
     flex: 1,
   },
@@ -178,7 +183,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
     paddingVertical: 4,
+  },
+  folderTitleGroup: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+    marginLeft: 10,
+  },
+  folderTitleLabel: {
+    ...Typography.caption,
+    color: Colors.brand.textSecondary,
   },
   folderName: {
     ...Typography.title,
