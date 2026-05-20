@@ -4,11 +4,23 @@ import { ResultStatusIcon } from '@/components/ui/result-status-icon';
 import { ScanResultReason } from '@/components/ui/scan-result-reason';
 import { getMockScanResultReason } from '@/constants/scan-result-reasons';
 import { Colors, Typography } from '@/constants/theme';
+import { useAnalysisResult } from '@/hooks/use-analysis-result';
+import {
+  getAnalysisDisplayUrl,
+  getAnalysisReasonText,
+  getRouteParam,
+} from '@/utils/analysis-result-display';
 
 export default function ScanResultBlockScreen() {
-  const { url } = useLocalSearchParams<{ url: string }>();
-  // TODO: 테스트용 mock 판정 이유입니다. 백엔드 reason 응답 연동 시 제거합니다.
-  const reason = getMockScanResultReason('danger');
+  const {
+    analysisId: analysisIdParam,
+    url: urlParam,
+  } = useLocalSearchParams<{ analysisId?: string | string[]; url?: string | string[] }>();
+  const analysisId = getRouteParam(analysisIdParam);
+  const url = getRouteParam(urlParam);
+  const { analysis, isLoading, errorMessage } = useAnalysisResult(analysisId);
+  const displayUrl = getAnalysisDisplayUrl(analysis, url);
+  const reason = getAnalysisReasonText(analysis, getMockScanResultReason('danger'));
 
   return (
     <>
@@ -36,13 +48,16 @@ export default function ScanResultBlockScreen() {
         {/* 결과 텍스트 */}
         <Text style={styles.resultTitle}>차단된 위험 링크입니다.</Text>
 
+        {isLoading && <Text style={styles.statusText}>분석 결과를 불러오는 중입니다.</Text>}
+        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+
         <ScanResultReason reason={reason} style={styles.reasonCard} />
 
         {/* 검사 대상 카드 */}
         <View style={styles.card}>
           <Text style={styles.cardLabel}>검사 대상</Text>
           <Text style={styles.cardUrl} numberOfLines={1} ellipsizeMode="tail">
-            {url}
+            {displayUrl}
           </Text>
         </View>
 
@@ -87,6 +102,18 @@ const styles = StyleSheet.create({
   },
   reasonCard: {
     marginBottom: 24,
+  },
+  statusText: {
+    ...Typography.caption,
+    color: Colors.brand.textSecondary,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  errorText: {
+    ...Typography.caption,
+    color: Colors.brand.textWarning,
+    textAlign: 'center',
+    marginBottom: 10,
   },
   card: {
     width: '100%',
