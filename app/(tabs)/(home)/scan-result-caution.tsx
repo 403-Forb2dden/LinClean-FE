@@ -32,6 +32,7 @@ export default function ScanResultCautionScreen() {
   const [saveModalVisible, setSaveModalVisible] = useState(false);
   const shouldRedirectToVerdict = Boolean(analysis?.verdict && analysis.verdict !== 'caution');
   const isVerifyingAnalysis = Boolean(analysisId) && !errorMessage && (!analysis?.verdict || isLoading);
+  const canSave = displayUrl.trim().length > 0 && !isLoading && !shouldRedirectToVerdict;
 
   useEffect(() => {
     if (!analysis?.verdict || analysis.verdict === 'caution') {
@@ -49,6 +50,10 @@ export default function ScanResultCautionScreen() {
   }, [analysis, url]);
 
   const handleSave = (title: string) => {
+    if (!canSave) {
+      return;
+    }
+
     // TODO: POST /api/v1/saved-links { analysisId } 호출 후 응답으로 교체
     addLink({
       id: Date.now(),
@@ -139,7 +144,12 @@ export default function ScanResultCautionScreen() {
 
         {/* 버튼 영역 */}
         <View style={styles.buttonArea}>
-          <TouchableOpacity style={styles.cautionButton} onPress={() => setSaveModalVisible(true)} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={[styles.cautionButton, !canSave && styles.disabledButton]}
+            onPress={() => setSaveModalVisible(true)}
+            activeOpacity={0.8}
+            disabled={!canSave}
+          >
             <Text style={styles.cautionButtonText}>주의 후 저장</Text>
           </TouchableOpacity>
 
@@ -237,6 +247,9 @@ const styles = StyleSheet.create({
   cautionButtonText: {
     ...Typography.section,
     color: Colors.brand.text,
+  },
+  disabledButton: {
+    opacity: 0.45,
   },
   secondaryButton: {
     width: '100%',

@@ -39,6 +39,7 @@ export default function ScanResultScreen() {
   const [saveModalVisible, setSaveModalVisible] = useState(false);
   const shouldRedirectToVerdict = Boolean(analysis?.verdict && analysis.verdict !== 'safe');
   const isVerifyingAnalysis = Boolean(analysisId) && !errorMessage && (!analysis?.verdict || isLoading);
+  const canSave = displayUrl.trim().length > 0 && !isLoading && !shouldRedirectToVerdict;
 
   useEffect(() => {
     if (!analysis?.verdict || analysis.verdict === 'safe') {
@@ -56,6 +57,10 @@ export default function ScanResultScreen() {
   }, [analysis, url]);
 
   const handleSave = (title: string) => {
+    if (!canSave) {
+      return;
+    }
+
     // TODO: POST /api/v1/saved-links { analysisId } 호출 후 응답으로 교체
     // 현재는 URL 기반 mock 데이터로 즉시 추가
     addLink({
@@ -147,7 +152,12 @@ export default function ScanResultScreen() {
 
         {/* 버튼 영역 */}
         <View style={styles.buttonArea}>
-          <TouchableOpacity style={styles.primaryButton} onPress={() => setSaveModalVisible(true)} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={[styles.primaryButton, !canSave && styles.disabledButton]}
+            onPress={() => setSaveModalVisible(true)}
+            activeOpacity={0.8}
+            disabled={!canSave}
+          >
             <Text style={styles.primaryButtonText}>저장</Text>
           </TouchableOpacity>
 
@@ -249,6 +259,9 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     ...Typography.section,
     color: Colors.brand.onPrimary,
+  },
+  disabledButton: {
+    opacity: 0.45,
   },
   secondaryButton: {
     width: '100%',
