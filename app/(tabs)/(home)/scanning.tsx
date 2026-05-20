@@ -1,29 +1,93 @@
+import { useAuth } from '@clerk/expo';
 import LottieView from 'lottie-react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+import { fetchAnalysis, requestAnalysis, type AnalysisResponse, type AnalysisVerdict } from '@/api/analyses';
+import { ApiError } from '@/api/api-client';
 import { Colors, Typography } from '@/constants/theme';
 
-// TODO: 백엔드 연동 시 POST /api/v1/analyses 호출 후 폴링으로 결과 확인
-// Request: { original_url }
-// Response: { analysis_id, status, verdict, score, summary }
-// verdict: 'safe' → scan-result(allowed), 'caution'/'danger' → 별도 결과 화면
-// API 명세: Draft of the specification.md > POST /analyses, GET /analyses/{analysisId} 참고
+const POLLING_INTERVAL_MS = 2_000;
+const MAX_POLLING_MS = 30_000;
 
 export default function ScanningScreen() {
-  const { url } = useLocalSearchParams<{ url: string }>();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const { url: urlParam } = useLocalSearchParams<{ url?: string | string[] }>();
+  const url = getUrlParam(urlParam);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [retryKey, setRetryKey] = useState(0);
+  const getTokenRef = useRef(getToken);
 
   useEffect(() => {
-    // TODO: 실제 백엔드 분석 요청으로 교체
-    // verdict에 따라 화면 분기:
-    //   safe    → '/(tabs)/(home)/scan-result'
-    //   caution → '/(tabs)/(home)/scan-result-caution'
-    //   block   → '/(tabs)/(home)/scan-result-block'
-    const timer = setTimeout(() => {
-      router.replace({ pathname: '/(tabs)/(home)/scan-result-block', params: { url } });
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [url]);
+    getTokenRef.current = getToken;
+  }, [getToken]);
+
+  useEffect(() => {
+    const abortController = new AbortController();
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let timedOut = false;
+
+    if (!isLoaded) {
+      return () => abortController.abort();
+    }
+
+    if (!isSignedIn) {
+      setErrorMessage('로그인 상태를 확인할 수 없습니다. 다시 로그인한 뒤 시도해주세요.');
+      return () => abortController.abort();
+    }
+
+    if (!url) {
+      setErrorMessage('검사할 URL을 찾을 수 없습니다. 링크를 다시 입력해주세요.');
+      return () => abortController.abort();
+    }
+
+    setErrorMessage('');
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        timedOut = true;
+        abortController.abort();
+        reject(new Error('TIMEOUT'));
+      }, MAX_POLLING_MS);
+    });
+
+    Promise.race([
+      runAnalysisPolling({
+        getToken: () => getTokenRef.current(),
+        url,
+        signal: abortController.signal,
+      }),
+      timeoutPromise,
+    ])
+      .catch((error) => {
+        if (timedOut) {
+          setErrorMessage(getAnalysisErrorMessage(new Error('TIMEOUT')));
+          return;
+        }
+
+        if (isAbortError(error)) {
+          return;
+        }
+
+        setErrorMessage(getAnalysisErrorMessage(error));
+      })
+      .finally(() => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+      });
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+
+      abortController.abort();
+    };
+  }, [isLoaded, isSignedIn, retryKey, url]);
+
+  const hasError = errorMessage.length > 0;
 
   return (
     <>
@@ -43,8 +107,8 @@ export default function ScanningScreen() {
         <View style={styles.animationWrapper}>
           <LottieView
             source={require('@/assets/animations/scanning.json')}
-            autoPlay
-            loop
+            autoPlay={!hasError}
+            loop={!hasError}
             style={styles.animation}
           />
           <View style={styles.dotsOverlay}>
@@ -55,8 +119,12 @@ export default function ScanningScreen() {
         </View>
 
         {/* 텍스트 */}
-        <Text style={styles.title}>보안 검사 중입니다</Text>
-        <Text style={styles.subtitle}>약 5–10초 정도 소요돼요</Text>
+        <Text style={styles.title}>
+          {hasError ? '검사를 완료하지 못했어요' : '보안 검사 중입니다'}
+        </Text>
+        <Text style={[styles.subtitle, hasError && styles.errorText]}>
+          {hasError ? errorMessage : '약 5-10초 정도 소요돼요'}
+        </Text>
 
         {/* 검사 대상 카드 */}
         <View style={styles.card}>
@@ -65,9 +133,161 @@ export default function ScanningScreen() {
             {url}
           </Text>
         </View>
+
+        {hasError && (
+          <View style={styles.buttonArea}>
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() => setRetryKey((key) => key + 1)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.primaryButtonText}>다시 검사</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={() => router.back()}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.secondaryButtonText}>돌아가기</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </>
   );
+}
+
+async function runAnalysisPolling({
+  getToken,
+  url,
+  signal,
+}: {
+  getToken: () => Promise<string | null>;
+  url: string;
+  signal: AbortSignal;
+}) {
+  const deadline = Date.now() + MAX_POLLING_MS;
+  let analysis = await requestAnalysis(getToken, url, { signal });
+
+  while (!signal.aborted) {
+    const handled = handleAnalysisResult(analysis, url, signal);
+
+    if (handled) {
+      return;
+    }
+
+    const remainingMs = deadline - Date.now();
+
+    if (remainingMs <= 0) {
+      throw new Error('TIMEOUT');
+    }
+
+    await wait(Math.min(POLLING_INTERVAL_MS, remainingMs), signal);
+    analysis = await fetchAnalysis(getToken, analysis.analysisId, { signal });
+  }
+}
+
+function handleAnalysisResult(analysis: AnalysisResponse, fallbackUrl: string, signal: AbortSignal) {
+  if (analysis.status === 'queued') {
+    return false;
+  }
+
+  if (analysis.status === 'failed') {
+    throw new Error(analysis.errorMessage || 'ANALYSIS_FAILED');
+  }
+
+  if (!analysis.verdict) {
+    throw new Error('MISSING_VERDICT');
+  }
+
+  if (!signal.aborted) {
+    router.replace({
+      pathname: getResultPath(analysis.verdict),
+      params: {
+        url: analysis.originalUrl ?? fallbackUrl,
+        analysisId: analysis.analysisId,
+        verdict: analysis.verdict,
+      },
+    });
+  }
+
+  return true;
+}
+
+function getResultPath(verdict: AnalysisVerdict) {
+  switch (verdict) {
+    case 'safe':
+      return '/(tabs)/(home)/scan-result';
+    case 'caution':
+      return '/(tabs)/(home)/scan-result-caution';
+    case 'danger':
+      return '/(tabs)/(home)/scan-result-block';
+  }
+}
+
+function wait(ms: number, signal: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal.aborted) {
+      reject(createAbortError());
+      return;
+    }
+
+    const handleAbort = () => {
+      clearTimeout(timer);
+      reject(createAbortError());
+    };
+
+    const timer = setTimeout(() => {
+      signal.removeEventListener('abort', handleAbort);
+      resolve();
+    }, ms);
+
+    signal.addEventListener('abort', handleAbort, { once: true });
+  });
+}
+
+function createAbortError() {
+  const error = new Error('Analysis polling aborted');
+  error.name = 'AbortError';
+  return error;
+}
+
+function isAbortError(error: unknown) {
+  return typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError';
+}
+
+function getAnalysisErrorMessage(error: unknown) {
+  if (error instanceof ApiError) {
+    if (error.status === 401 || error.status === 403) {
+      return '로그인 상태를 확인할 수 없습니다. 다시 로그인한 뒤 시도해주세요.';
+    }
+
+    return error.message || '링크 검사 요청에 실패했습니다. 잠시 후 다시 시도해주세요.';
+  }
+
+  if (error instanceof Error) {
+    if (error.message === 'Missing Clerk session token') {
+      return '로그인 상태를 확인할 수 없습니다. 다시 로그인한 뒤 시도해주세요.';
+    }
+
+    if (error.message === 'TIMEOUT') {
+      return '분석 결과를 기다리는 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.';
+    }
+
+    if (error.message === 'MISSING_VERDICT') {
+      return '분석 결과를 확인할 수 없습니다. 잠시 후 다시 시도해주세요.';
+    }
+
+    if (error.message && error.message !== 'ANALYSIS_FAILED') {
+      return error.message;
+    }
+  }
+
+  return '링크 검사에 실패했습니다. 잠시 후 다시 시도해주세요.';
+}
+
+function getUrlParam(value: string | string[] | undefined) {
+  return typeof value === 'string' ? value : '';
 }
 
 const styles = StyleSheet.create({
@@ -120,6 +340,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     gap: 6,
+    marginBottom: 24,
   },
   cardLabel: {
     ...Typography.caption,
@@ -128,6 +349,39 @@ const styles = StyleSheet.create({
   cardUrl: {
     ...Typography.body,
     fontWeight: '700',
+    color: Colors.brand.text,
+  },
+  errorText: {
+    color: Colors.brand.textWarning,
+  },
+  buttonArea: {
+    width: '100%',
+    gap: 12,
+  },
+  primaryButton: {
+    width: '100%',
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.brand.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryButtonText: {
+    ...Typography.section,
+    color: Colors.brand.onPrimary,
+  },
+  secondaryButton: {
+    width: '100%',
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.brand.surface,
+    borderWidth: 1.5,
+    borderColor: Colors.brand.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryButtonText: {
+    ...Typography.section,
     color: Colors.brand.text,
   },
 });
