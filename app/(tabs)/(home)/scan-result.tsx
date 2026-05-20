@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ResultStatusIcon } from '@/components/ui/result-status-icon';
@@ -12,6 +12,7 @@ import {
   getAnalysisDisplayUrl,
   getAnalysisFinalUrl,
   getAnalysisReasonText,
+  getAnalysisResultPath,
   getRouteParam,
   getSiteName,
 } from '@/utils/analysis-result-display';
@@ -36,6 +37,23 @@ export default function ScanResultScreen() {
   const finalUrl = getAnalysisFinalUrl(analysis, displayUrl);
   const reason = getAnalysisReasonText(analysis, getMockScanResultReason('safe'));
   const [saveModalVisible, setSaveModalVisible] = useState(false);
+  const shouldRedirectToVerdict = Boolean(analysis?.verdict && analysis.verdict !== 'safe');
+  const isVerifyingAnalysis = Boolean(analysisId) && !errorMessage && (!analysis?.verdict || isLoading);
+
+  useEffect(() => {
+    if (!analysis?.verdict || analysis.verdict === 'safe') {
+      return;
+    }
+
+    router.replace({
+      pathname: getAnalysisResultPath(analysis.verdict),
+      params: {
+        url: analysis.originalUrl ?? url ?? '',
+        analysisId: analysis.analysisId,
+        verdict: analysis.verdict,
+      },
+    });
+  }, [analysis, url]);
 
   const handleSave = (title: string) => {
     // TODO: POST /api/v1/saved-links { analysisId } 호출 후 응답으로 교체
@@ -66,6 +84,27 @@ export default function ScanResultScreen() {
       }
     }
   };
+
+  if (isVerifyingAnalysis || shouldRedirectToVerdict) {
+    return (
+      <>
+        <Stack.Screen
+          options={{
+            headerShown: true,
+            title: '寃??寃곌낵',
+            headerBackTitle: '',
+            headerStyle: { backgroundColor: Colors.brand.background },
+            headerTitleStyle: { ...Typography.title, color: Colors.brand.text },
+            headerTintColor: Colors.brand.text,
+            headerShadowVisible: false,
+          }}
+        />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.statusText}>遺꾩꽍 寃곌낵瑜?遺덈윭?ㅻ뒗 以묒엯?덈떎.</Text>
+        </View>
+      </>
+    );
+  }
 
   return (
     <>
@@ -170,6 +209,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   // 검사 대상 카드
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: Colors.brand.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
   card: {
     width: '100%',
     backgroundColor: Colors.brand.surface,

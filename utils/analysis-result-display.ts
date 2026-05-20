@@ -1,4 +1,4 @@
-import type { AnalysisResponse } from '@/api/analyses';
+import type { AnalysisResponse, AnalysisVerdict } from '@/api/analyses';
 
 export function getRouteParam(value: string | string[] | undefined) {
   return typeof value === 'string' ? value : undefined;
@@ -32,6 +32,17 @@ export function getAnalysisReasonText(
   }
 
   return fallbackReason;
+}
+
+export function getAnalysisResultPath(verdict: AnalysisVerdict) {
+  switch (verdict) {
+    case 'safe':
+      return '/(tabs)/(home)/scan-result';
+    case 'caution':
+      return '/(tabs)/(home)/scan-result-caution';
+    case 'danger':
+      return '/(tabs)/(home)/scan-result-block';
+  }
 }
 
 export function getSiteName(url: string) {
