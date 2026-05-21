@@ -1,5 +1,17 @@
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { AppIcon } from '@/components/ui/app-icon';
@@ -8,12 +20,16 @@ import { FolderContextMenu } from '@/components/ui/folder-context-menu';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Colors, Typography } from '@/constants/theme';
-import { useSavedLinks } from '@/context/saved-links-context';
+import { getSavedLinkErrorMessage, useSavedLinks, type SavedLink } from '@/context/saved-links-context';
 import type { AnchorPosition } from '@/components/ui/folder-card';
 
 export default function HomeScreen() {
-  const { links, toggleBookmark, deleteLink } = useSavedLinks();
+  const { links, toggleBookmark, deleteLink, updateTitle } = useSavedLinks();
   const [menuState, setMenuState] = useState<{ visible: boolean; anchor?: AnchorPosition; linkId?: number }>({ visible: false });
+  const [editingLink, setEditingLink] = useState<SavedLink | null>(null);
+  const [titleValue, setTitleValue] = useState('');
+  const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
+  const titleInputRef = useRef<TextInput>(null);
 
   // 최근 저장한 링크 — createdAt 내림차순 상위 3개
   const recentLinks = links.slice(0, 3);
@@ -23,6 +39,83 @@ export default function HomeScreen() {
   };
 
   const selectedLink = links.find((l) => l.id === menuState.linkId);
+
+  const handleBookmark = useCallback(
+    async (id: number) => {
+      try {
+        await toggleBookmark(id);
+      } catch (error) {
+        Alert.alert(
+          '북마크 변경 실패',
+          getSavedLinkErrorMessage(error, '북마크 상태를 변경하지 못했습니다. 잠시 후 다시 시도해주세요.'),
+        );
+      }
+    },
+    [toggleBookmark],
+  );
+
+  const handleDelete = useCallback(
+    (id: number) => {
+      Alert.alert('링크 삭제', '저장한 링크를 삭제할까요?', [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteLink(id);
+            } catch (error) {
+              Alert.alert(
+                '삭제 실패',
+                getSavedLinkErrorMessage(error, '링크를 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.'),
+              );
+            }
+          },
+        },
+      ]);
+    },
+    [deleteLink],
+  );
+
+  const openTitleModal = useCallback((link: SavedLink) => {
+    setEditingLink(link);
+    setTitleValue(link.title);
+    setTimeout(() => titleInputRef.current?.focus(), 100);
+  }, []);
+
+  const handleTitleCancel = useCallback(() => {
+    if (isUpdatingTitle) {
+      return;
+    }
+
+    setEditingLink(null);
+    setTitleValue('');
+  }, [isUpdatingTitle]);
+
+  const handleTitleConfirm = useCallback(async () => {
+    const trimmedTitle = titleValue.trim();
+
+    if (!editingLink || trimmedTitle.length === 0 || trimmedTitle.length > 500 || isUpdatingTitle) {
+      return;
+    }
+
+    setIsUpdatingTitle(true);
+
+    try {
+      await updateTitle(editingLink.id, trimmedTitle);
+      setEditingLink(null);
+      setTitleValue('');
+    } catch (error) {
+      Alert.alert(
+        '제목 수정 실패',
+        getSavedLinkErrorMessage(error, '제목을 수정하지 못했습니다. 잠시 후 다시 시도해주세요.'),
+      );
+    } finally {
+      setIsUpdatingTitle(false);
+    }
+  }, [editingLink, isUpdatingTitle, titleValue, updateTitle]);
+
+  const titleSubmitDisabled = titleValue.trim().length === 0 || titleValue.trim().length > 500 || isUpdatingTitle;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -75,7 +168,9 @@ export default function HomeScreen() {
                 originalUrl={link.originalUrl}
                 finalUrl={link.finalUrl}
                 bookmarked={link.isBookmarked}
-                onBookmark={() => toggleBookmark(link.id)}
+                onBookmark={() => {
+                  void handleBookmark(link.id);
+                }}
                 onMore={(anchor) => handleMore(link.id, anchor)}
               />
             ))}
@@ -88,17 +183,76 @@ export default function HomeScreen() {
         anchor={menuState.anchor}
         items={[
           {
-            label: selectedLink?.isBookmarked ? '북마크 제거' : '북마크 추가',
-            onPress: () => menuState.linkId != null && toggleBookmark(menuState.linkId),
+            label: '제목 수정',
+            onPress: () => selectedLink && openTitleModal(selectedLink),
           },
           {
             label: '링크 삭제',
-            onPress: () => menuState.linkId != null && deleteLink(menuState.linkId),
+            onPress: () => menuState.linkId != null && handleDelete(menuState.linkId),
             destructive: true,
           },
         ]}
         onDismiss={() => setMenuState({ visible: false })}
       />
+
+      <Modal
+        visible={editingLink !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={handleTitleCancel}
+      >
+        <KeyboardAvoidingView
+          style={renameStyles.overlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <Pressable style={renameStyles.backdrop} onPress={handleTitleCancel} />
+          <View style={renameStyles.sheet}>
+            <Text style={renameStyles.sheetTitle}>제목 수정</Text>
+            <View style={renameStyles.inputRow}>
+              <TextInput
+                ref={titleInputRef}
+                style={renameStyles.input}
+                value={titleValue}
+                onChangeText={setTitleValue}
+                placeholder="URL 제목 입력"
+                placeholderTextColor={Colors.brand.textHint}
+                returnKeyType="done"
+                onSubmitEditing={handleTitleConfirm}
+                maxLength={500}
+                editable={!isUpdatingTitle}
+                autoFocus
+              />
+              {titleValue.length > 0 && !isUpdatingTitle && (
+                <TouchableOpacity
+                  onPress={() => setTitleValue('')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={renameStyles.clearButton}
+                >
+                  <Text style={renameStyles.clearButtonText}>×</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <View style={renameStyles.actions}>
+              <TouchableOpacity
+                style={renameStyles.cancelBtn}
+                onPress={handleTitleCancel}
+                disabled={isUpdatingTitle}
+              >
+                <Text style={renameStyles.cancelText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[renameStyles.confirmBtn, titleSubmitDisabled && renameStyles.confirmBtnDisabled]}
+                onPress={handleTitleConfirm}
+                disabled={titleSubmitDisabled}
+              >
+                <Text style={[renameStyles.confirmText, titleSubmitDisabled && renameStyles.confirmTextDisabled]}>
+                  {isUpdatingTitle ? '저장 중...' : '저장'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -167,5 +321,93 @@ const styles = StyleSheet.create({
 
   linkList: {
     gap: 12,
+  },
+});
+
+const renameStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: Colors.brand.overlayBackdrop,
+  },
+  sheet: {
+    backgroundColor: Colors.brand.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    paddingBottom: 40,
+    gap: 16,
+  },
+  sheetTitle: {
+    ...Typography.section,
+    color: Colors.brand.text,
+    textAlign: 'center',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: Colors.brand.line,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  input: {
+    flex: 1,
+    ...Typography.body,
+    color: Colors.brand.text,
+    padding: 0,
+  },
+  clearButton: {
+    marginLeft: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.brand.softMint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clearButtonText: {
+    ...Typography.caption,
+    color: Colors.brand.primary,
+    lineHeight: 16,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: Colors.brand.line,
+    alignItems: 'center',
+  },
+  cancelText: {
+    ...Typography.body,
+    fontWeight: '700',
+    color: Colors.brand.textSecondary,
+  },
+  confirmBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: Colors.brand.primary,
+    alignItems: 'center',
+  },
+  confirmBtnDisabled: {
+    backgroundColor: Colors.brand.softMint,
+  },
+  confirmText: {
+    ...Typography.body,
+    fontWeight: '700',
+    color: Colors.brand.onPrimary,
+  },
+  confirmTextDisabled: {
+    color: Colors.brand.textHint,
   },
 });
