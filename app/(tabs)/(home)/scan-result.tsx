@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ResultStatusIcon } from '@/components/ui/result-status-icon';
 import { ScanResultReason } from '@/components/ui/scan-result-reason';
 import { getMockScanResultReason } from '@/constants/scan-result-reasons';
 import { Colors, Typography } from '@/constants/theme';
-import { useSavedLinks } from '@/context/saved-links-context';
+import { getSavedLinkErrorMessage, useSavedLinks } from '@/context/saved-links-context';
 import { LinkSaveModal } from '@/components/ui/link-save-modal';
 import { useAnalysisResult } from '@/hooks/use-analysis-result';
 import {
@@ -14,15 +14,7 @@ import {
   getAnalysisReasonText,
   getAnalysisResultPath,
   getRouteParam,
-  getSiteName,
 } from '@/utils/analysis-result-display';
-
-// TODO: 백엔드 연동 시 아래 흐름으로 교체
-// 1. scanning.tsx에서 POST /api/v1/analyses → analysisId 수신 후 params로 전달
-// 2. 여기서 POST /api/v1/saved-links { analysisId } 호출
-// 3. 응답(id, title, siteName 등)을 addLink에 전달
-// ERD: SAVED_LINK.analysis_id → ANALYSIS.analysis_id (FK)
-// API 명세: Draft of the specification.md > 4.1 링크 저장 참고
 
 export default function ScanResultScreen() {
   const {
@@ -37,9 +29,16 @@ export default function ScanResultScreen() {
   const finalUrl = getAnalysisFinalUrl(analysis, displayUrl);
   const reason = getAnalysisReasonText(analysis, getMockScanResultReason('safe'));
   const [saveModalVisible, setSaveModalVisible] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const shouldRedirectToVerdict = Boolean(analysis?.verdict && analysis.verdict !== 'safe');
   const isVerifyingAnalysis = Boolean(analysisId) && !errorMessage && (!analysis?.verdict || isLoading);
-  const canSave = displayUrl.trim().length > 0 && !isLoading && !shouldRedirectToVerdict;
+  const saveAnalysisId = analysis?.analysisId ?? analysisId;
+  const canSave =
+    Boolean(saveAnalysisId) &&
+    displayUrl.trim().length > 0 &&
+    !isLoading &&
+    !shouldRedirectToVerdict &&
+    !isSaving;
 
   useEffect(() => {
     if (!analysis?.verdict || analysis.verdict === 'safe') {
@@ -56,28 +55,32 @@ export default function ScanResultScreen() {
     });
   }, [analysis, url]);
 
-  const handleSave = (title: string) => {
-    if (!canSave) {
+  const handleSave = async (title: string) => {
+    if (!canSave || !saveAnalysisId) {
       return;
     }
 
-    // TODO: POST /api/v1/saved-links { analysisId } 호출 후 응답으로 교체
-    // 현재는 URL 기반 mock 데이터로 즉시 추가
-    addLink({
-      id: Date.now(),
-      analysisId: analysis?.analysisId ?? analysisId ?? `mock-${Date.now()}`,
-      categoryId: null,
-      originalUrl: displayUrl,
-      finalUrl: finalUrl || null,
-      title,
-      description: analysis?.summary ?? '저장된 링크입니다.',
-      siteName: getSiteName(finalUrl || displayUrl),
-      verdict: analysis?.verdict ?? 'safe',
-      isBookmarked: false,
-      createdAt: new Date().toISOString(),
-    });
-    setSaveModalVisible(false);
-    router.dismissAll();
+    setIsSaving(true);
+
+    try {
+      await addLink({
+        analysisId: saveAnalysisId,
+        categoryId: null,
+        title,
+        description: analysis?.summary ?? '저장된 링크입니다.',
+      });
+      setSaveModalVisible(false);
+      Alert.alert('저장 완료', '링크가 저장되었습니다.', [
+        { text: '확인', onPress: () => router.dismissAll() },
+      ]);
+    } catch (error) {
+      Alert.alert(
+        '저장 실패',
+        getSavedLinkErrorMessage(error, '링크를 저장하지 못했습니다. 잠시 후 다시 시도해주세요.'),
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleOpenUrl = async () => {
@@ -170,7 +173,12 @@ export default function ScanResultScreen() {
       <LinkSaveModal
         visible={saveModalVisible}
         url={displayUrl}
-        onCancel={() => setSaveModalVisible(false)}
+        loading={isSaving}
+        onCancel={() => {
+          if (!isSaving) {
+            setSaveModalVisible(false);
+          }
+        }}
         onSave={handleSave}
       />
     </>

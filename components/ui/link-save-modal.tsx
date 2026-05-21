@@ -18,6 +18,7 @@ interface LinkSaveModalProps {
   url: string;
   // 향후 링크카드 more 버튼의 URL 제목 수정 기능에서 기존 제목을 초기값으로 사용합니다.
   initialTitle?: string;
+  loading?: boolean;
   onCancel: () => void;
   onSave: (title: string) => void;
 }
@@ -26,13 +27,14 @@ export function LinkSaveModal({
   visible,
   url,
   initialTitle = '',
+  loading = false,
   onCancel,
   onSave,
 }: LinkSaveModalProps) {
   const [title, setTitle] = useState(initialTitle);
 
   const trimmedTitle = title.trim();
-  const saveDisabled = trimmedTitle.length === 0;
+  const saveDisabled = loading || trimmedTitle.length === 0;
 
   useEffect(() => {
     setTitle(initialTitle);
@@ -54,7 +56,7 @@ export function LinkSaveModal({
         style={styles.overlay}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <Pressable style={styles.backdrop} onPress={onCancel} />
+        <Pressable style={styles.backdrop} onPress={loading ? undefined : onCancel} />
 
         <View style={styles.sheet}>
           <View style={styles.handle} />
@@ -74,7 +76,8 @@ export function LinkSaveModal({
               placeholderTextColor={Colors.brand.textHint}
               returnKeyType="done"
               onSubmitEditing={handleSave}
-              maxLength={50}
+              maxLength={500}
+              editable={!loading}
               autoFocus
             />
           </View>
@@ -93,6 +96,7 @@ export function LinkSaveModal({
               style={styles.cancelButton}
               onPress={onCancel}
               activeOpacity={0.8}
+              disabled={loading}
             >
               <Text style={styles.cancelButtonText}>취소</Text>
             </TouchableOpacity>
@@ -104,7 +108,7 @@ export function LinkSaveModal({
               disabled={saveDisabled}
             >
               <Text style={[styles.saveButtonText, saveDisabled && styles.saveButtonTextDisabled]}>
-                저장
+                {loading ? '저장 중...' : '저장'}
               </Text>
             </TouchableOpacity>
           </View>

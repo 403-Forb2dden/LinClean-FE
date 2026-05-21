@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ResultStatusIcon } from '@/components/ui/result-status-icon';
 import { ScanResultReason } from '@/components/ui/scan-result-reason';
 import { getMockScanResultReason } from '@/constants/scan-result-reasons';
 import { Colors, Typography } from '@/constants/theme';
-import { useSavedLinks } from '@/context/saved-links-context';
+import { getSavedLinkErrorMessage, useSavedLinks } from '@/context/saved-links-context';
 import { LinkSaveModal } from '@/components/ui/link-save-modal';
 import { useAnalysisResult } from '@/hooks/use-analysis-result';
 import {
@@ -14,7 +14,6 @@ import {
   getAnalysisReasonText,
   getAnalysisResultPath,
   getRouteParam,
-  getSiteName,
 } from '@/utils/analysis-result-display';
 
 export default function ScanResultCautionScreen() {
@@ -30,9 +29,16 @@ export default function ScanResultCautionScreen() {
   const finalUrl = getAnalysisFinalUrl(analysis, displayUrl);
   const reason = getAnalysisReasonText(analysis, getMockScanResultReason('caution'));
   const [saveModalVisible, setSaveModalVisible] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const shouldRedirectToVerdict = Boolean(analysis?.verdict && analysis.verdict !== 'caution');
   const isVerifyingAnalysis = Boolean(analysisId) && !errorMessage && (!analysis?.verdict || isLoading);
-  const canSave = displayUrl.trim().length > 0 && !isLoading && !shouldRedirectToVerdict;
+  const saveAnalysisId = analysis?.analysisId ?? analysisId;
+  const canSave =
+    Boolean(saveAnalysisId) &&
+    displayUrl.trim().length > 0 &&
+    !isLoading &&
+    !shouldRedirectToVerdict &&
+    !isSaving;
 
   useEffect(() => {
     if (!analysis?.verdict || analysis.verdict === 'caution') {
@@ -49,27 +55,32 @@ export default function ScanResultCautionScreen() {
     });
   }, [analysis, url]);
 
-  const handleSave = (title: string) => {
-    if (!canSave) {
+  const handleSave = async (title: string) => {
+    if (!canSave || !saveAnalysisId) {
       return;
     }
 
-    // TODO: POST /api/v1/saved-links { analysisId } 호출 후 응답으로 교체
-    addLink({
-      id: Date.now(),
-      analysisId: analysis?.analysisId ?? analysisId ?? `mock-${Date.now()}`,
-      categoryId: null,
-      originalUrl: displayUrl,
-      finalUrl: finalUrl || null,
-      title,
-      description: analysis?.summary ?? '저장된 링크입니다.',
-      siteName: getSiteName(finalUrl || displayUrl),
-      verdict: analysis?.verdict ?? 'caution',
-      isBookmarked: false,
-      createdAt: new Date().toISOString(),
-    });
-    setSaveModalVisible(false);
-    router.dismissAll();
+    setIsSaving(true);
+
+    try {
+      await addLink({
+        analysisId: saveAnalysisId,
+        categoryId: null,
+        title,
+        description: analysis?.summary ?? '저장된 링크입니다.',
+      });
+      setSaveModalVisible(false);
+      Alert.alert('저장 완료', '주의 링크가 저장되었습니다.', [
+        { text: '확인', onPress: () => router.dismissAll() },
+      ]);
+    } catch (error) {
+      Alert.alert(
+        '저장 실패',
+        getSavedLinkErrorMessage(error, '링크를 저장하지 못했습니다. 잠시 후 다시 시도해주세요.'),
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleOpenUrl = async () => {
@@ -162,7 +173,12 @@ export default function ScanResultCautionScreen() {
       <LinkSaveModal
         visible={saveModalVisible}
         url={displayUrl}
-        onCancel={() => setSaveModalVisible(false)}
+        loading={isSaving}
+        onCancel={() => {
+          if (!isSaving) {
+            setSaveModalVisible(false);
+          }
+        }}
         onSave={handleSave}
       />
     </>
