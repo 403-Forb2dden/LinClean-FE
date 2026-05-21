@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ResultStatusIcon } from '@/components/ui/result-status-icon';
@@ -7,6 +7,15 @@ import { getMockScanResultReason } from '@/constants/scan-result-reasons';
 import { Colors, Typography } from '@/constants/theme';
 import { useSavedLinks } from '@/context/saved-links-context';
 import { LinkSaveModal } from '@/components/ui/link-save-modal';
+import { useAnalysisResult } from '@/hooks/use-analysis-result';
+import {
+  getAnalysisDisplayUrl,
+  getAnalysisFinalUrl,
+  getAnalysisReasonText,
+  getAnalysisResultPath,
+  getRouteParam,
+  getSiteName,
+} from '@/utils/analysis-result-display';
 
 // TODO: 백엔드 연동 시 아래 흐름으로 교체
 // 1. scanning.tsx에서 POST /api/v1/analyses → analysisId 수신 후 params로 전달
@@ -16,28 +25,54 @@ import { LinkSaveModal } from '@/components/ui/link-save-modal';
 // API 명세: Draft of the specification.md > 4.1 링크 저장 참고
 
 export default function ScanResultScreen() {
-  const { url } = useLocalSearchParams<{ url: string }>();
+  const {
+    analysisId: analysisIdParam,
+    url: urlParam,
+  } = useLocalSearchParams<{ analysisId?: string | string[]; url?: string | string[] }>();
   const { addLink } = useSavedLinks();
-  // TODO: 테스트용 mock 판정 이유입니다. 백엔드 reason 응답 연동 시 제거합니다.
-  const reason = getMockScanResultReason('safe');
+  const analysisId = getRouteParam(analysisIdParam);
+  const url = getRouteParam(urlParam);
+  const { analysis, isLoading, errorMessage } = useAnalysisResult(analysisId);
+  const displayUrl = getAnalysisDisplayUrl(analysis, url);
+  const finalUrl = getAnalysisFinalUrl(analysis, displayUrl);
+  const reason = getAnalysisReasonText(analysis, getMockScanResultReason('safe'));
   const [saveModalVisible, setSaveModalVisible] = useState(false);
+  const shouldRedirectToVerdict = Boolean(analysis?.verdict && analysis.verdict !== 'safe');
+  const isVerifyingAnalysis = Boolean(analysisId) && !errorMessage && (!analysis?.verdict || isLoading);
+  const canSave = displayUrl.trim().length > 0 && !isLoading && !shouldRedirectToVerdict;
+
+  useEffect(() => {
+    if (!analysis?.verdict || analysis.verdict === 'safe') {
+      return;
+    }
+
+    router.replace({
+      pathname: getAnalysisResultPath(analysis.verdict),
+      params: {
+        url: analysis.originalUrl ?? url ?? '',
+        analysisId: analysis.analysisId,
+        verdict: analysis.verdict,
+      },
+    });
+  }, [analysis, url]);
 
   const handleSave = (title: string) => {
-    const resolvedUrl = url ?? '';
+    if (!canSave) {
+      return;
+    }
+
     // TODO: POST /api/v1/saved-links { analysisId } 호출 후 응답으로 교체
     // 현재는 URL 기반 mock 데이터로 즉시 추가
     addLink({
       id: Date.now(),
-      analysisId: `mock-${Date.now()}`,
+      analysisId: analysis?.analysisId ?? analysisId ?? `mock-${Date.now()}`,
       categoryId: null,
-      originalUrl: resolvedUrl,
-      finalUrl: resolvedUrl || null,
+      originalUrl: displayUrl,
+      finalUrl: finalUrl || null,
       title,
-      description: '저장된 링크입니다.',
-      siteName: (() => {
-        try { return new URL(resolvedUrl).hostname; } catch { return '알 수 없음'; }
-      })(),
-      verdict: 'safe',
+      description: analysis?.summary ?? '저장된 링크입니다.',
+      siteName: getSiteName(finalUrl || displayUrl),
+      verdict: analysis?.verdict ?? 'safe',
       isBookmarked: false,
       createdAt: new Date().toISOString(),
     });
@@ -46,14 +81,35 @@ export default function ScanResultScreen() {
   };
 
   const handleOpenUrl = async () => {
-    if (url) {
+    if (finalUrl) {
       try {
-        await Linking.openURL(url);
+        await Linking.openURL(finalUrl);
       } catch {
         // URL을 열 수 없는 경우 무시
       }
     }
   };
+
+  if (isVerifyingAnalysis || shouldRedirectToVerdict) {
+    return (
+      <>
+        <Stack.Screen
+          options={{
+            headerShown: true,
+            title: '寃??寃곌낵',
+            headerBackTitle: '',
+            headerStyle: { backgroundColor: Colors.brand.background },
+            headerTitleStyle: { ...Typography.title, color: Colors.brand.text },
+            headerTintColor: Colors.brand.text,
+            headerShadowVisible: false,
+          }}
+        />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.statusText}>遺꾩꽍 寃곌낵瑜?遺덈윭?ㅻ뒗 以묒엯?덈떎.</Text>
+        </View>
+      </>
+    );
+  }
 
   return (
     <>
@@ -81,19 +137,27 @@ export default function ScanResultScreen() {
         {/* 결과 텍스트 */}
         <Text style={styles.resultTitle}>안전한 웹사이트입니다.</Text>
 
+        {isLoading && <Text style={styles.statusText}>분석 결과를 불러오는 중입니다.</Text>}
+        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+
         <ScanResultReason reason={reason} style={styles.reasonCard} />
 
         {/* 검사 대상 카드 */}
         <View style={styles.card}>
           <Text style={styles.cardLabel}>검사 대상</Text>
           <Text style={styles.cardUrl} numberOfLines={1} ellipsizeMode="tail">
-            {url}
+            {displayUrl}
           </Text>
         </View>
 
         {/* 버튼 영역 */}
         <View style={styles.buttonArea}>
-          <TouchableOpacity style={styles.primaryButton} onPress={() => setSaveModalVisible(true)} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={[styles.primaryButton, !canSave && styles.disabledButton]}
+            onPress={() => setSaveModalVisible(true)}
+            activeOpacity={0.8}
+            disabled={!canSave}
+          >
             <Text style={styles.primaryButtonText}>저장</Text>
           </TouchableOpacity>
 
@@ -105,7 +169,7 @@ export default function ScanResultScreen() {
 
       <LinkSaveModal
         visible={saveModalVisible}
-        url={url ?? ''}
+        url={displayUrl}
         onCancel={() => setSaveModalVisible(false)}
         onSave={handleSave}
       />
@@ -142,7 +206,26 @@ const styles = StyleSheet.create({
   reasonCard: {
     marginBottom: 24,
   },
+  statusText: {
+    ...Typography.caption,
+    color: Colors.brand.textSecondary,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  errorText: {
+    ...Typography.caption,
+    color: Colors.brand.textWarning,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
   // 검사 대상 카드
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: Colors.brand.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
   card: {
     width: '100%',
     backgroundColor: Colors.brand.surface,
@@ -176,6 +259,9 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     ...Typography.section,
     color: Colors.brand.onPrimary,
+  },
+  disabledButton: {
+    opacity: 0.45,
   },
   secondaryButton: {
     width: '100%',

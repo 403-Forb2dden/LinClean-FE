@@ -1,14 +1,66 @@
+import { useEffect } from 'react';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ResultStatusIcon } from '@/components/ui/result-status-icon';
 import { ScanResultReason } from '@/components/ui/scan-result-reason';
 import { getMockScanResultReason } from '@/constants/scan-result-reasons';
 import { Colors, Typography } from '@/constants/theme';
+import { useAnalysisResult } from '@/hooks/use-analysis-result';
+import {
+  getAnalysisDisplayUrl,
+  getAnalysisReasonText,
+  getAnalysisResultPath,
+  getRouteParam,
+} from '@/utils/analysis-result-display';
 
 export default function ScanResultBlockScreen() {
-  const { url } = useLocalSearchParams<{ url: string }>();
-  // TODO: 테스트용 mock 판정 이유입니다. 백엔드 reason 응답 연동 시 제거합니다.
-  const reason = getMockScanResultReason('danger');
+  const {
+    analysisId: analysisIdParam,
+    url: urlParam,
+  } = useLocalSearchParams<{ analysisId?: string | string[]; url?: string | string[] }>();
+  const analysisId = getRouteParam(analysisIdParam);
+  const url = getRouteParam(urlParam);
+  const { analysis, isLoading, errorMessage } = useAnalysisResult(analysisId);
+  const displayUrl = getAnalysisDisplayUrl(analysis, url);
+  const reason = getAnalysisReasonText(analysis, getMockScanResultReason('danger'));
+  const shouldRedirectToVerdict = Boolean(analysis?.verdict && analysis.verdict !== 'danger');
+  const isVerifyingAnalysis = Boolean(analysisId) && !errorMessage && (!analysis?.verdict || isLoading);
+
+  useEffect(() => {
+    if (!analysis?.verdict || analysis.verdict === 'danger') {
+      return;
+    }
+
+    router.replace({
+      pathname: getAnalysisResultPath(analysis.verdict),
+      params: {
+        url: analysis.originalUrl ?? url ?? '',
+        analysisId: analysis.analysisId,
+        verdict: analysis.verdict,
+      },
+    });
+  }, [analysis, url]);
+
+  if (isVerifyingAnalysis || shouldRedirectToVerdict) {
+    return (
+      <>
+        <Stack.Screen
+          options={{
+            headerShown: true,
+            title: '寃??寃곌낵',
+            headerBackTitle: '',
+            headerStyle: { backgroundColor: Colors.brand.background },
+            headerTitleStyle: { ...Typography.title, color: Colors.brand.text },
+            headerTintColor: Colors.brand.text,
+            headerShadowVisible: false,
+          }}
+        />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.statusText}>遺꾩꽍 寃곌낵瑜?遺덈윭?ㅻ뒗 以묒엯?덈떎.</Text>
+        </View>
+      </>
+    );
+  }
 
   return (
     <>
@@ -36,13 +88,16 @@ export default function ScanResultBlockScreen() {
         {/* 결과 텍스트 */}
         <Text style={styles.resultTitle}>차단된 위험 링크입니다.</Text>
 
+        {isLoading && <Text style={styles.statusText}>분석 결과를 불러오는 중입니다.</Text>}
+        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+
         <ScanResultReason reason={reason} style={styles.reasonCard} />
 
         {/* 검사 대상 카드 */}
         <View style={styles.card}>
           <Text style={styles.cardLabel}>검사 대상</Text>
           <Text style={styles.cardUrl} numberOfLines={1} ellipsizeMode="tail">
-            {url}
+            {displayUrl}
           </Text>
         </View>
 
@@ -87,6 +142,25 @@ const styles = StyleSheet.create({
   },
   reasonCard: {
     marginBottom: 24,
+  },
+  statusText: {
+    ...Typography.caption,
+    color: Colors.brand.textSecondary,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  errorText: {
+    ...Typography.caption,
+    color: Colors.brand.textWarning,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: Colors.brand.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
   },
   card: {
     width: '100%',
