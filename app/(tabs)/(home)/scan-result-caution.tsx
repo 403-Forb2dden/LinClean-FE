@@ -70,9 +70,10 @@ export default function ScanResultCautionScreen() {
         description: analysis?.summary ?? '저장된 링크입니다.',
       });
       setSaveModalVisible(false);
-      Alert.alert('저장 완료', '주의 링크가 저장되었습니다.', [
-        { text: '확인', onPress: () => router.dismissAll() },
-      ]);
+      router.replace({
+        pathname: '/(tabs)/(home)',
+        params: { savedLinkToast: String(Date.now()) },
+      });
     } catch (error) {
       Alert.alert(
         '저장 실패',

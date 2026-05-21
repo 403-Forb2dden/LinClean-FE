@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -13,26 +13,43 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { AppIcon } from '@/components/ui/app-icon';
 import { CardLink } from '@/components/ui/card-link';
 import { FolderContextMenu } from '@/components/ui/folder-context-menu';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { SectionHeader } from '@/components/ui/section-header';
+import { Toast } from '@/components/ui/toast';
 import { Colors, Typography } from '@/constants/theme';
 import { getSavedLinkErrorMessage, useSavedLinks, type SavedLink } from '@/context/saved-links-context';
 import type { AnchorPosition } from '@/components/ui/folder-card';
 
 export default function HomeScreen() {
+  const { savedLinkToast: savedLinkToastParam } = useLocalSearchParams<{
+    savedLinkToast?: string | string[];
+  }>();
   const { links, toggleBookmark, deleteLink, updateTitle } = useSavedLinks();
   const [menuState, setMenuState] = useState<{ visible: boolean; anchor?: AnchorPosition; linkId?: number }>({ visible: false });
   const [editingLink, setEditingLink] = useState<SavedLink | null>(null);
   const [titleValue, setTitleValue] = useState('');
   const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
+  const [saveToastVisible, setSaveToastVisible] = useState(false);
+  const [deleteToastVisible, setDeleteToastVisible] = useState(false);
   const titleInputRef = useRef<TextInput>(null);
+  const lastToastParamRef = useRef<string | undefined>(undefined);
+  const savedLinkToast = typeof savedLinkToastParam === 'string' ? savedLinkToastParam : undefined;
 
   // 최근 저장한 링크 — createdAt 내림차순 상위 3개
   const recentLinks = links.slice(0, 3);
+
+  useEffect(() => {
+    if (!savedLinkToast || lastToastParamRef.current === savedLinkToast) {
+      return;
+    }
+
+    lastToastParamRef.current = savedLinkToast;
+    setSaveToastVisible(true);
+  }, [savedLinkToast]);
 
   const handleMore = (id: number, anchor: AnchorPosition) => {
     setMenuState({ visible: true, anchor, linkId: id });
@@ -64,6 +81,7 @@ export default function HomeScreen() {
           onPress: async () => {
             try {
               await deleteLink(id);
+              setDeleteToastVisible(true);
             } catch (error) {
               Alert.alert(
                 '삭제 실패',
@@ -253,6 +271,21 @@ export default function HomeScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <Toast
+        visible={saveToastVisible}
+        message="링크가 저장되었습니다."
+        placement="top"
+        topOffset={96}
+        onHide={() => setSaveToastVisible(false)}
+      />
+      <Toast
+        visible={deleteToastVisible}
+        message="링크가 삭제되었습니다."
+        placement="top"
+        topOffset={96}
+        onHide={() => setDeleteToastVisible(false)}
+      />
     </SafeAreaView>
   );
 }

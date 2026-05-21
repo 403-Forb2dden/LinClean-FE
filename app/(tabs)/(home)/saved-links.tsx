@@ -21,6 +21,7 @@ import { BookmarkChip } from '@/components/ui/bookmark-chip';
 import { CardLink } from '@/components/ui/card-link';
 import { FilterChip, type FilterChipItem } from '@/components/ui/filter-chip';
 import { FolderContextMenu, type ContextMenuItem } from '@/components/ui/folder-context-menu';
+import { Toast } from '@/components/ui/toast';
 import type { AnchorPosition } from '@/components/ui/folder-card';
 import { Colors, Typography } from '@/constants/theme';
 import { getSavedLinkErrorMessage, useSavedLinks, type SavedLink } from '@/context/saved-links-context';
@@ -61,6 +62,7 @@ export default function SavedLinksScreen() {
   const [editingLink, setEditingLink] = useState<SavedLink | null>(null);
   const [titleValue, setTitleValue] = useState('');
   const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
+  const [deleteToastVisible, setDeleteToastVisible] = useState(false);
   const titleInputRef = useRef<TextInput>(null);
 
   const displayLinks = useMemo(() => {
@@ -106,6 +108,7 @@ export default function SavedLinksScreen() {
           onPress: async () => {
             try {
               await deleteLink(id);
+              setDeleteToastVisible(true);
             } catch (error) {
               Alert.alert(
                 '삭제 실패',
@@ -320,6 +323,14 @@ export default function SavedLinksScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <Toast
+        visible={deleteToastVisible}
+        message="링크가 삭제되었습니다."
+        placement="top"
+        topOffset={96}
+        onHide={() => setDeleteToastVisible(false)}
+      />
     </SafeAreaView>
   );
 }
