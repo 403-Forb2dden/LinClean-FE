@@ -35,6 +35,7 @@ export default function HomeScreen() {
   const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
   const [saveToastVisible, setSaveToastVisible] = useState(false);
   const [deleteToastVisible, setDeleteToastVisible] = useState(false);
+  const [titleToastVisible, setTitleToastVisible] = useState(false);
   const titleInputRef = useRef<TextInput>(null);
   const lastToastParamRef = useRef<string | undefined>(undefined);
   const savedLinkToast = typeof savedLinkToastParam === 'string' ? savedLinkToastParam : undefined;
@@ -123,6 +124,7 @@ export default function HomeScreen() {
       await updateTitle(editingLink.id, trimmedTitle);
       setEditingLink(null);
       setTitleValue('');
+      setTitleToastVisible(true);
     } catch (error) {
       Alert.alert(
         '제목 수정 실패',
@@ -133,7 +135,12 @@ export default function HomeScreen() {
     }
   }, [editingLink, isUpdatingTitle, titleValue, updateTitle]);
 
-  const titleSubmitDisabled = titleValue.trim().length === 0 || titleValue.trim().length > 500 || isUpdatingTitle;
+  const trimmedTitleValue = titleValue.trim();
+  const titleSubmitDisabled =
+    trimmedTitleValue.length === 0 ||
+    trimmedTitleValue.length > 500 ||
+    trimmedTitleValue === editingLink?.title.trim() ||
+    isUpdatingTitle;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -285,6 +292,13 @@ export default function HomeScreen() {
         placement="top"
         topOffset={96}
         onHide={() => setDeleteToastVisible(false)}
+      />
+      <Toast
+        visible={titleToastVisible}
+        message="제목이 수정되었습니다."
+        placement="top"
+        topOffset={96}
+        onHide={() => setTitleToastVisible(false)}
       />
     </SafeAreaView>
   );
