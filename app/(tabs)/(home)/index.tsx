@@ -246,7 +246,7 @@ export default function HomeScreen() {
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   style={renameStyles.clearButton}
                 >
-                  <Text style={renameStyles.clearButtonText}>×</Text>
+                  <Text style={renameStyles.clearButtonText}>−</Text>
                 </TouchableOpacity>
               )}
             </View>
