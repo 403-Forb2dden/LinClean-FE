@@ -12,6 +12,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Typography } from '@/constants/theme';
 
 const version = Constants.expoConfig?.version ?? '—';
+type LoginNotice = 'withdrawal-complete' | 'session-expired';
 
 function SectionLabel({ label }: { label: string }) {
   return <Text style={styles.sectionLabel}>{label}</Text>;
@@ -93,13 +94,13 @@ export default function SettingsScreen() {
     try {
       await withdrawMember(getToken);
       await signOutSafely();
-      goToLoginWithAlert('회원탈퇴 완료', '회원탈퇴가 완료되었습니다.');
+      goToLoginWithNotice('withdrawal-complete');
     } catch (error) {
       console.error(error);
 
       if (error instanceof ApiError && error.status === 401) {
         await signOutSafely();
-        goToLoginWithAlert('세션 만료', '현재 세션이 유효하지 않아 로그인 화면으로 이동합니다.');
+        goToLoginWithNotice('session-expired');
         return;
       }
 
@@ -120,11 +121,11 @@ export default function SettingsScreen() {
     }
   }
 
-  function goToLoginWithAlert(title: string, message: string) {
-    router.replace('/(auth)/login');
-    setTimeout(() => {
-      Alert.alert(title, message);
-    }, 0);
+  function goToLoginWithNotice(notice: LoginNotice) {
+    router.replace({
+      pathname: '/(auth)/login',
+      params: { notice },
+    });
   }
 
   return (
