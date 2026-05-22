@@ -1,15 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +13,7 @@ import { CardLink } from '@/components/ui/card-link';
 import { FolderContextMenu } from '@/components/ui/folder-context-menu';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { SectionHeader } from '@/components/ui/section-header';
+import { TitleEditModal } from '@/components/ui/title-edit-modal';
 import { Toast } from '@/components/ui/toast';
 import { Colors, Typography } from '@/constants/theme';
 import { getSavedLinkErrorMessage, useSavedLinks, type SavedLink } from '@/context/saved-links-context';
@@ -31,12 +26,9 @@ export default function HomeScreen() {
   const { links, toggleBookmark, deleteLink, updateTitle } = useSavedLinks();
   const [menuState, setMenuState] = useState<{ visible: boolean; anchor?: AnchorPosition; linkId?: number }>({ visible: false });
   const [editingLink, setEditingLink] = useState<SavedLink | null>(null);
-  const [titleValue, setTitleValue] = useState('');
-  const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
   const [saveToastVisible, setSaveToastVisible] = useState(false);
   const [deleteToastVisible, setDeleteToastVisible] = useState(false);
   const [titleToastVisible, setTitleToastVisible] = useState(false);
-  const titleInputRef = useRef<TextInput>(null);
   const lastToastParamRef = useRef<string | undefined>(undefined);
   const savedLinkToast = typeof savedLinkToastParam === 'string' ? savedLinkToastParam : undefined;
 
@@ -98,49 +90,12 @@ export default function HomeScreen() {
 
   const openTitleModal = useCallback((link: SavedLink) => {
     setEditingLink(link);
-    setTitleValue(link.title);
-    setTimeout(() => titleInputRef.current?.focus(), 100);
   }, []);
 
-  const handleTitleCancel = useCallback(() => {
-    if (isUpdatingTitle) {
-      return;
-    }
-
-    setEditingLink(null);
-    setTitleValue('');
-  }, [isUpdatingTitle]);
-
-  const handleTitleConfirm = useCallback(async () => {
-    const trimmedTitle = titleValue.trim();
-
-    if (!editingLink || trimmedTitle.length === 0 || trimmedTitle.length > 500 || isUpdatingTitle) {
-      return;
-    }
-
-    setIsUpdatingTitle(true);
-
-    try {
-      await updateTitle(editingLink.id, trimmedTitle);
-      setEditingLink(null);
-      setTitleValue('');
-      setTitleToastVisible(true);
-    } catch (error) {
-      Alert.alert(
-        '제목 수정 실패',
-        getSavedLinkErrorMessage(error, '제목을 수정하지 못했습니다. 잠시 후 다시 시도해주세요.'),
-      );
-    } finally {
-      setIsUpdatingTitle(false);
-    }
-  }, [editingLink, isUpdatingTitle, titleValue, updateTitle]);
-
-  const trimmedTitleValue = titleValue.trim();
-  const titleSubmitDisabled =
-    trimmedTitleValue.length === 0 ||
-    trimmedTitleValue.length > 500 ||
-    trimmedTitleValue === editingLink?.title.trim() ||
-    isUpdatingTitle;
+  const handleTitleConfirm = useCallback(async (id: number, title: string) => {
+    await updateTitle(id, title);
+    setTitleToastVisible(true);
+  }, [updateTitle]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -220,64 +175,11 @@ export default function HomeScreen() {
         onDismiss={() => setMenuState({ visible: false })}
       />
 
-      <Modal
-        visible={editingLink !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={handleTitleCancel}
-      >
-        <KeyboardAvoidingView
-          style={renameStyles.overlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <Pressable style={renameStyles.backdrop} onPress={handleTitleCancel} />
-          <View style={renameStyles.sheet}>
-            <Text style={renameStyles.sheetTitle}>제목 수정</Text>
-            <View style={renameStyles.inputRow}>
-              <TextInput
-                ref={titleInputRef}
-                style={renameStyles.input}
-                value={titleValue}
-                onChangeText={setTitleValue}
-                placeholder="URL 제목 입력"
-                placeholderTextColor={Colors.brand.textHint}
-                returnKeyType="done"
-                onSubmitEditing={handleTitleConfirm}
-                maxLength={500}
-                editable={!isUpdatingTitle}
-                autoFocus
-              />
-              {titleValue.length > 0 && !isUpdatingTitle && (
-                <TouchableOpacity
-                  onPress={() => setTitleValue('')}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  style={renameStyles.clearButton}
-                >
-                  <Text style={renameStyles.clearButtonText}>−</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            <View style={renameStyles.actions}>
-              <TouchableOpacity
-                style={renameStyles.cancelBtn}
-                onPress={handleTitleCancel}
-                disabled={isUpdatingTitle}
-              >
-                <Text style={renameStyles.cancelText}>취소</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[renameStyles.confirmBtn, titleSubmitDisabled && renameStyles.confirmBtnDisabled]}
-                onPress={handleTitleConfirm}
-                disabled={titleSubmitDisabled}
-              >
-                <Text style={[renameStyles.confirmText, titleSubmitDisabled && renameStyles.confirmTextDisabled]}>
-                  {isUpdatingTitle ? '저장 중...' : '저장'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+      <TitleEditModal
+        editingLink={editingLink}
+        onConfirm={handleTitleConfirm}
+        onClose={() => setEditingLink(null)}
+      />
 
       <Toast
         visible={saveToastVisible}
@@ -368,93 +270,5 @@ const styles = StyleSheet.create({
 
   linkList: {
     gap: 12,
-  },
-});
-
-const renameStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: Colors.brand.overlayBackdrop,
-  },
-  sheet: {
-    backgroundColor: Colors.brand.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
-    paddingBottom: 40,
-    gap: 16,
-  },
-  sheetTitle: {
-    ...Typography.section,
-    color: Colors.brand.text,
-    textAlign: 'center',
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: Colors.brand.line,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  input: {
-    flex: 1,
-    ...Typography.body,
-    color: Colors.brand.text,
-    padding: 0,
-  },
-  clearButton: {
-    marginLeft: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.brand.softMint,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  clearButtonText: {
-    ...Typography.caption,
-    color: Colors.brand.primary,
-    lineHeight: 16,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  cancelBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: Colors.brand.line,
-    alignItems: 'center',
-  },
-  cancelText: {
-    ...Typography.body,
-    fontWeight: '700',
-    color: Colors.brand.textSecondary,
-  },
-  confirmBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: Colors.brand.primary,
-    alignItems: 'center',
-  },
-  confirmBtnDisabled: {
-    backgroundColor: Colors.brand.softMint,
-  },
-  confirmText: {
-    ...Typography.body,
-    fontWeight: '700',
-    color: Colors.brand.onPrimary,
-  },
-  confirmTextDisabled: {
-    color: Colors.brand.textHint,
   },
 });
