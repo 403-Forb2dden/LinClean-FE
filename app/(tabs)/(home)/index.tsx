@@ -1,28 +1,101 @@
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { AppIcon } from '@/components/ui/app-icon';
 import { CardLink } from '@/components/ui/card-link';
 import { FolderContextMenu } from '@/components/ui/folder-context-menu';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { SectionHeader } from '@/components/ui/section-header';
+import { TitleEditModal } from '@/components/ui/title-edit-modal';
+import { Toast } from '@/components/ui/toast';
 import { Colors, Typography } from '@/constants/theme';
-import { useSavedLinks } from '@/context/saved-links-context';
+import { getSavedLinkErrorMessage, useSavedLinks, type SavedLink } from '@/context/saved-links-context';
 import type { AnchorPosition } from '@/components/ui/folder-card';
 
 export default function HomeScreen() {
-  const { links, toggleBookmark, deleteLink } = useSavedLinks();
+  const { savedLinkToast: savedLinkToastParam } = useLocalSearchParams<{
+    savedLinkToast?: string | string[];
+  }>();
+  const { links, toggleBookmark, deleteLink, updateTitle } = useSavedLinks();
   const [menuState, setMenuState] = useState<{ visible: boolean; anchor?: AnchorPosition; linkId?: number }>({ visible: false });
+  const [editingLink, setEditingLink] = useState<SavedLink | null>(null);
+  const [saveToastVisible, setSaveToastVisible] = useState(false);
+  const [deleteToastVisible, setDeleteToastVisible] = useState(false);
+  const [titleToastVisible, setTitleToastVisible] = useState(false);
+  const lastToastParamRef = useRef<string | undefined>(undefined);
+  const savedLinkToast = typeof savedLinkToastParam === 'string' ? savedLinkToastParam : undefined;
 
   // 최근 저장한 링크 — createdAt 내림차순 상위 3개
   const recentLinks = links.slice(0, 3);
+
+  useEffect(() => {
+    if (!savedLinkToast || lastToastParamRef.current === savedLinkToast) {
+      return;
+    }
+
+    lastToastParamRef.current = savedLinkToast;
+    setSaveToastVisible(true);
+  }, [savedLinkToast]);
 
   const handleMore = (id: number, anchor: AnchorPosition) => {
     setMenuState({ visible: true, anchor, linkId: id });
   };
 
   const selectedLink = links.find((l) => l.id === menuState.linkId);
+
+  const handleBookmark = useCallback(
+    async (id: number) => {
+      try {
+        await toggleBookmark(id);
+      } catch (error) {
+        Alert.alert(
+          '북마크 변경 실패',
+          getSavedLinkErrorMessage(error, '북마크 상태를 변경하지 못했습니다. 잠시 후 다시 시도해주세요.'),
+        );
+      }
+    },
+    [toggleBookmark],
+  );
+
+  const handleDelete = useCallback(
+    (id: number) => {
+      Alert.alert('링크 삭제', '저장한 링크를 삭제할까요?', [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteLink(id);
+              setDeleteToastVisible(true);
+            } catch (error) {
+              Alert.alert(
+                '삭제 실패',
+                getSavedLinkErrorMessage(error, '링크를 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.'),
+              );
+            }
+          },
+        },
+      ]);
+    },
+    [deleteLink],
+  );
+
+  const openTitleModal = useCallback((link: SavedLink) => {
+    setEditingLink(link);
+  }, []);
+
+  const handleTitleConfirm = useCallback(async (id: number, title: string) => {
+    await updateTitle(id, title);
+    setTitleToastVisible(true);
+  }, [updateTitle]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -75,7 +148,9 @@ export default function HomeScreen() {
                 originalUrl={link.originalUrl}
                 finalUrl={link.finalUrl}
                 bookmarked={link.isBookmarked}
-                onBookmark={() => toggleBookmark(link.id)}
+                onBookmark={() => {
+                  void handleBookmark(link.id);
+                }}
                 onMore={(anchor) => handleMore(link.id, anchor)}
               />
             ))}
@@ -88,16 +163,44 @@ export default function HomeScreen() {
         anchor={menuState.anchor}
         items={[
           {
-            label: selectedLink?.isBookmarked ? '북마크 제거' : '북마크 추가',
-            onPress: () => menuState.linkId != null && toggleBookmark(menuState.linkId),
+            label: '제목 수정',
+            onPress: () => selectedLink && openTitleModal(selectedLink),
           },
           {
             label: '링크 삭제',
-            onPress: () => menuState.linkId != null && deleteLink(menuState.linkId),
+            onPress: () => menuState.linkId != null && handleDelete(menuState.linkId),
             destructive: true,
           },
         ]}
         onDismiss={() => setMenuState({ visible: false })}
+      />
+
+      <TitleEditModal
+        editingLink={editingLink}
+        onConfirm={handleTitleConfirm}
+        onClose={() => setEditingLink(null)}
+      />
+
+      <Toast
+        visible={saveToastVisible}
+        message="링크가 저장되었습니다."
+        placement="top"
+        topOffset={96}
+        onHide={() => setSaveToastVisible(false)}
+      />
+      <Toast
+        visible={deleteToastVisible}
+        message="링크가 삭제되었습니다."
+        placement="top"
+        topOffset={96}
+        onHide={() => setDeleteToastVisible(false)}
+      />
+      <Toast
+        visible={titleToastVisible}
+        message="제목이 수정되었습니다."
+        placement="top"
+        topOffset={96}
+        onHide={() => setTitleToastVisible(false)}
       />
     </SafeAreaView>
   );

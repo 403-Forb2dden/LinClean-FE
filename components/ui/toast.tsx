@@ -7,10 +7,19 @@ interface ToastProps {
   visible: boolean;
   message: string;
   duration?: number;
+  placement?: 'center' | 'top';
+  topOffset?: number;
   onHide?: () => void;
 }
 
-export function Toast({ visible, message, duration = 2500, onHide }: ToastProps) {
+export function Toast({
+  visible,
+  message,
+  duration = 2500,
+  placement = 'center',
+  topOffset = 64,
+  onHide,
+}: ToastProps) {
   const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -26,7 +35,14 @@ export function Toast({ visible, message, duration = 2500, onHide }: ToastProps)
   if (!visible) return null;
 
   return (
-    <Animated.View style={[styles.container, { opacity }]} pointerEvents="none">
+    <Animated.View
+      style={[
+        styles.container,
+        placement === 'top' ? [styles.topContainer, { top: topOffset }] : styles.centerContainer,
+        { opacity },
+      ]}
+      pointerEvents="none"
+    >
       <View style={styles.toast}>
         <IconSymbol name="checkmark.circle.fill" size={20} color={Colors.brand.primary} />
         <Text style={styles.message}>{message}</Text>
@@ -38,14 +54,19 @@ export function Toast({ visible, message, duration = 2500, onHide }: ToastProps)
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 0,
-    bottom: 0,
     left: 0,
     right: 0,
     zIndex: 100,
-    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 16,
+  },
+  centerContainer: {
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+  },
+  topContainer: {
+    justifyContent: 'flex-start',
   },
   toast: {
     flexDirection: 'row',
