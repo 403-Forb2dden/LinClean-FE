@@ -1,9 +1,12 @@
 import { useAuth } from '@clerk/expo';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
+import { useRef, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ApiError } from '@/api/api-client';
+import { withdrawMember } from '@/api/members';
 import { AppIcon } from '@/components/ui/app-icon';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Typography } from '@/constants/theme';
@@ -42,7 +45,9 @@ function SettingRow({ label, onPress, rightText, destructive = false, showChevro
 }
 
 export default function SettingsScreen() {
-  const { signOut } = useAuth();
+  const { getToken, signOut } = useAuth();
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const isWithdrawingRef = useRef(false);
 
   function handleLogout() {
     Alert.alert('로그아웃', '로그아웃하시겠습니까?', [
@@ -54,6 +59,72 @@ export default function SettingsScreen() {
           await signOut();
           router.replace('/login' as any);
         },
+      },
+    ]);
+  }
+
+  function handleWithdraw() {
+    if (isWithdrawingRef.current) {
+      return;
+    }
+
+    Alert.alert(
+      '회원탈퇴',
+      '회원탈퇴하시겠습니까? 탈퇴 후에는 현재 계정으로 서비스를 이용할 수 없습니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '회원탈퇴',
+          style: 'destructive',
+          onPress: withdrawAccount,
+        },
+      ],
+    );
+  }
+
+  async function withdrawAccount() {
+    if (isWithdrawingRef.current) {
+      return;
+    }
+
+    isWithdrawingRef.current = true;
+    setIsWithdrawing(true);
+
+    try {
+      await withdrawMember(getToken);
+      await signOutSafely();
+      showLoginAlert('회원탈퇴 완료', '회원탈퇴가 완료되었습니다.');
+    } catch (error) {
+      console.error(error);
+
+      if (error instanceof ApiError && error.status === 401) {
+        await signOutSafely();
+        showLoginAlert('세션 만료', '현재 세션이 유효하지 않아 로그인 화면으로 이동합니다.');
+        return;
+      }
+
+      isWithdrawingRef.current = false;
+      setIsWithdrawing(false);
+      Alert.alert(
+        '회원탈퇴 실패',
+        '회원탈퇴 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.',
+      );
+    }
+  }
+
+  async function signOutSafely() {
+    try {
+      await signOut();
+    } catch (signOutError) {
+      console.error(signOutError);
+    }
+  }
+
+  function showLoginAlert(title: string, message: string) {
+    Alert.alert(title, message, [
+      {
+        text: '확인',
+        onPress: () => router.replace('/login' as any),
       },
     ]);
   }
@@ -113,7 +184,12 @@ export default function SettingsScreen() {
         <View style={styles.group}>
           <SettingRow label="로그아웃" onPress={handleLogout} />
           <View style={styles.divider} />
-          <SettingRow label="회원탈퇴" destructive />
+          <SettingRow
+            label="회원탈퇴"
+            destructive
+            rightText={isWithdrawing ? '처리 중' : undefined}
+            onPress={isWithdrawing ? undefined : handleWithdraw}
+          />
         </View>
       </ScrollView>
     </SafeAreaView>

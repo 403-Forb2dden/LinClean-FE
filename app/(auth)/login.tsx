@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ApiError } from '@/api/api-client';
 import { SocialLoginButton } from '@/components/ui/social-login-button';
 import { Colors, Typography } from '@/constants/theme';
 import { syncAuthenticatedMember } from '@/services/auth-api';
@@ -18,6 +19,7 @@ const CLERK_REDIRECT_URL = AuthSession.makeRedirectUri({
   scheme: 'linclean',
   path: 'sso-callback',
 });
+const MEMBER_SYNC_RETRY_DELAYS_MS = [200, 500, 1000];
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -48,24 +50,15 @@ export default function LoginScreen() {
 
       await setActive({ session: createdSessionId });
       sessionActivated = true;
-      await syncAuthenticatedMember(getToken);
-
-      const sharedUrl = hasShareIntent ? getSharedUrlFromIntent(shareIntent) : null;
-
-      if (hasShareIntent) {
-        resetShareIntent(true);
-      }
-
-      if (sharedUrl) {
-        router.replace({
-          pathname: '/(tabs)/(home)/add-link',
-          params: { sharedUrl },
-        });
-      } else {
-        router.replace('/(tabs)/(home)');
-      }
+      await syncAuthenticatedMemberAfterSso();
+      navigateAfterSuccessfulLogin();
     } catch (error) {
       console.error(error);
+
+      if (error instanceof ApiError && error.status === 401) {
+        navigateAfterSuccessfulLogin();
+        return;
+      }
 
       if (sessionActivated) {
         try {
@@ -83,6 +76,49 @@ export default function LoginScreen() {
       setIsSigningIn(false);
     }
   };
+
+  function navigateAfterSuccessfulLogin() {
+    const sharedUrl = hasShareIntent ? getSharedUrlFromIntent(shareIntent) : null;
+
+    if (hasShareIntent) {
+      resetShareIntent(true);
+    }
+
+    if (sharedUrl) {
+      router.replace({
+        pathname: '/(tabs)/(home)/add-link',
+        params: { sharedUrl },
+      });
+    } else {
+      router.replace('/(tabs)/(home)');
+    }
+  }
+
+  async function syncAuthenticatedMemberAfterSso() {
+    let lastError: unknown;
+
+    for (const retryDelayMs of MEMBER_SYNC_RETRY_DELAYS_MS) {
+      await delay(retryDelayMs);
+
+      try {
+        return await syncAuthenticatedMember(() => getToken({ skipCache: true }));
+      } catch (error) {
+        lastError = error;
+
+        if (!(error instanceof ApiError) || error.status !== 401) {
+          throw error;
+        }
+      }
+    }
+
+    throw lastError;
+  }
+
+  function delay(ms: number) {
+    return new Promise<void>((resolve) => {
+      setTimeout(resolve, ms);
+    });
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
