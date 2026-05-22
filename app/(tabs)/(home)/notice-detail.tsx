@@ -24,6 +24,7 @@ export default function NoticeDetailScreen() {
     message: null,
   });
   const getTokenRef = useRef(getToken);
+  const retryControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     getTokenRef.current = getToken;
@@ -78,7 +79,24 @@ export default function NoticeDetailScreen() {
 
     void loadNotice(controller.signal);
 
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      retryControllerRef.current?.abort();
+      retryControllerRef.current = null;
+    };
+  }, [loadNotice]);
+
+  const handleRetry = useCallback(() => {
+    retryControllerRef.current?.abort();
+
+    const controller = new AbortController();
+    retryControllerRef.current = controller;
+
+    void loadNotice(controller.signal).finally(() => {
+      if (retryControllerRef.current === controller) {
+        retryControllerRef.current = null;
+      }
+    });
   }, [loadNotice]);
 
   const title = state.data?.title ?? '공지사항';
@@ -104,7 +122,7 @@ export default function NoticeDetailScreen() {
         <View style={styles.centerContent}>
           <Text style={styles.errorTitle}>공지사항을 불러올 수 없습니다.</Text>
           <Text style={styles.stateText}>{state.message}</Text>
-          <Button label="다시 시도" variant="secondary" onPress={() => void loadNotice()} />
+          <Button label="다시 시도" variant="secondary" onPress={handleRetry} />
         </View>
       )}
 
