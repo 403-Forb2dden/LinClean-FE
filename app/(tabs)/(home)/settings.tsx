@@ -57,7 +57,7 @@ export default function SettingsScreen() {
         style: 'destructive',
         onPress: async () => {
           await signOut();
-          router.replace('/login' as any);
+          router.replace('/(auth)/login');
         },
       },
     ]);
@@ -121,7 +121,7 @@ export default function SettingsScreen() {
   }
 
   function goToLoginWithAlert(title: string, message: string) {
-    router.replace('/login' as any);
+    router.replace('/(auth)/login');
     setTimeout(() => {
       Alert.alert(title, message);
     }, 0);
