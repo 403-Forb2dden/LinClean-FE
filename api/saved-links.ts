@@ -133,7 +133,7 @@ function buildSavedLinkQuery(query: SavedLinkListQuery) {
     params.set('bookmarked', String(query.bookmarked));
   }
 
-  if (query.cursor) {
+  if (query.cursor != null) {
     params.set('cursor', query.cursor);
   }
 
