@@ -36,6 +36,12 @@ const LOGIN_NOTICE_ALERTS: Record<LoginNotice, { title: string; message: string 
   },
 };
 
+function delay(ms: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { getToken, signOut } = useAuth();
@@ -136,12 +142,6 @@ export default function LoginScreen() {
     }
 
     throw lastError;
-  }
-
-  function delay(ms: number) {
-    return new Promise<void>((resolve) => {
-      setTimeout(resolve, ms);
-    });
   }
 
   return (
