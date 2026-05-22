@@ -84,11 +84,6 @@ export default function LoginScreen() {
     } catch (error) {
       console.error(error);
 
-      if (error instanceof ApiError && error.status === 401) {
-        navigateAfterSuccessfulLogin();
-        return;
-      }
-
       if (sessionActivated) {
         try {
           await signOut();
