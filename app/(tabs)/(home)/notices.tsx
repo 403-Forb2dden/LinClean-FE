@@ -35,6 +35,8 @@ export default function NoticesScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const getTokenRef = useRef(getToken);
+  const activeRequestRef = useRef<AbortController | null>(null);
+  const isLoadingMoreRef = useRef(false);
 
   useEffect(() => {
     getTokenRef.current = getToken;
@@ -53,6 +55,7 @@ export default function NoticesScreen() {
       }
 
       if (cursor) {
+        isLoadingMoreRef.current = true;
         setIsLoadingMore(true);
       } else if (refresh) {
         setIsRefreshing(true);
@@ -79,6 +82,8 @@ export default function NoticesScreen() {
 
         setErrorMessage(error instanceof Error ? error.message : '공지사항을 불러오지 못했습니다.');
       } finally {
+        isLoadingMoreRef.current = false;
+
         if (signal?.aborted) {
           return;
         }
@@ -91,25 +96,54 @@ export default function NoticesScreen() {
     [isLoaded, isSignedIn],
   );
 
+  const startLoadNotices = useCallback(
+    (options: Omit<LoadNoticesOptions, 'signal'> = {}) => {
+      activeRequestRef.current?.abort();
+
+      const controller = new AbortController();
+      activeRequestRef.current = controller;
+
+      void loadNotices({ ...options, signal: controller.signal }).finally(() => {
+        if (activeRequestRef.current === controller) {
+          activeRequestRef.current = null;
+        }
+      });
+    },
+    [loadNotices],
+  );
+
   useEffect(() => {
-    const controller = new AbortController();
+    startLoadNotices();
 
-    void loadNotices({ signal: controller.signal });
-
-    return () => controller.abort();
-  }, [loadNotices]);
+    return () => {
+      activeRequestRef.current?.abort();
+      activeRequestRef.current = null;
+    };
+  }, [startLoadNotices]);
 
   const handleRefresh = useCallback(() => {
-    void loadNotices({ refresh: true });
-  }, [loadNotices]);
+    startLoadNotices({ refresh: true });
+  }, [startLoadNotices]);
 
   const handleLoadMore = useCallback(() => {
-    if (!hasNext || !nextCursor || isInitialLoading || isRefreshing || isLoadingMore) {
+    if (
+      !hasNext ||
+      !nextCursor ||
+      isInitialLoading ||
+      isRefreshing ||
+      activeRequestRef.current ||
+      isLoadingMoreRef.current
+    ) {
       return;
     }
 
-    void loadNotices({ cursor: nextCursor });
-  }, [hasNext, isInitialLoading, isLoadingMore, isRefreshing, loadNotices, nextCursor]);
+    isLoadingMoreRef.current = true;
+    startLoadNotices({ cursor: nextCursor });
+  }, [hasNext, isInitialLoading, isRefreshing, nextCursor, startLoadNotices]);
+
+  const handleRetry = useCallback(() => {
+    startLoadNotices();
+  }, [startLoadNotices]);
 
   const renderNotice = useCallback(
     ({ item, index }: { item: NoticeListItemResponse; index: number }) => (
@@ -156,7 +190,7 @@ export default function NoticesScreen() {
         <View style={styles.centerContent}>
           <Text style={styles.errorTitle}>공지사항을 불러올 수 없습니다.</Text>
           <Text style={styles.stateText}>{errorMessage}</Text>
-          <Button label="다시 시도" variant="secondary" onPress={() => void loadNotices()} />
+          <Button label="다시 시도" variant="secondary" onPress={handleRetry} />
         </View>
       )}
 
