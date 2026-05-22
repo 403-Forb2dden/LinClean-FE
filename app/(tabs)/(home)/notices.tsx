@@ -146,9 +146,9 @@ export default function NoticesScreen() {
   }, [startLoadNotices]);
 
   const renderNotice = useCallback(
-    ({ item, index }: { item: NoticeListItemResponse; index: number }) => (
+    ({ item }: { item: NoticeListItemResponse }) => (
       <TouchableOpacity
-        style={[styles.noticeItem, index < notices.length - 1 && styles.noticeItemBorder]}
+        style={styles.noticeItem}
         activeOpacity={0.7}
         onPress={() =>
           router.push({
@@ -168,7 +168,7 @@ export default function NoticesScreen() {
         <Text style={styles.noticeDate}>{formatDate(item.createdAt)}</Text>
       </TouchableOpacity>
     ),
-    [notices.length],
+    [],
   );
 
   return (
@@ -200,6 +200,7 @@ export default function NoticesScreen() {
             data={notices}
             keyExtractor={(item) => String(item.id)}
             renderItem={renderNotice}
+            ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
             contentContainerStyle={notices.length === 0 && styles.emptyListContent}
             showsVerticalScrollIndicator={false}
             refreshControl={
@@ -292,9 +293,10 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     gap: 6,
   },
-  noticeItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.brand.line,
+  itemSeparator: {
+    height: 1,
+    backgroundColor: Colors.brand.line,
+    marginHorizontal: 18,
   },
   noticeTop: {
     flexDirection: 'row',
