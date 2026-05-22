@@ -93,13 +93,13 @@ export default function SettingsScreen() {
     try {
       await withdrawMember(getToken);
       await signOutSafely();
-      showLoginAlert('회원탈퇴 완료', '회원탈퇴가 완료되었습니다.');
+      goToLoginWithAlert('회원탈퇴 완료', '회원탈퇴가 완료되었습니다.');
     } catch (error) {
       console.error(error);
 
       if (error instanceof ApiError && error.status === 401) {
         await signOutSafely();
-        showLoginAlert('세션 만료', '현재 세션이 유효하지 않아 로그인 화면으로 이동합니다.');
+        goToLoginWithAlert('세션 만료', '현재 세션이 유효하지 않아 로그인 화면으로 이동합니다.');
         return;
       }
 
@@ -120,13 +120,11 @@ export default function SettingsScreen() {
     }
   }
 
-  function showLoginAlert(title: string, message: string) {
-    Alert.alert(title, message, [
-      {
-        text: '확인',
-        onPress: () => router.replace('/login' as any),
-      },
-    ]);
+  function goToLoginWithAlert(title: string, message: string) {
+    router.replace('/login' as any);
+    setTimeout(() => {
+      Alert.alert(title, message);
+    }, 0);
   }
 
   return (
