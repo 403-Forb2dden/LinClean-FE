@@ -16,6 +16,7 @@ import { SectionHeader } from '@/components/ui/section-header';
 import { TitleEditModal } from '@/components/ui/title-edit-modal';
 import { Toast } from '@/components/ui/toast';
 import { Colors, Typography } from '@/constants/theme';
+import { useFolders } from '@/context/folders-context';
 import { getSavedLinkErrorMessage, useSavedLinks, type SavedLink } from '@/context/saved-links-context';
 import type { AnchorPosition } from '@/components/ui/folder-card';
 
@@ -24,6 +25,7 @@ export default function HomeScreen() {
     savedLinkToast?: string | string[];
   }>();
   const { links, toggleBookmark, deleteLink, updateTitle } = useSavedLinks();
+  const { refreshFolders } = useFolders();
   const [menuState, setMenuState] = useState<{ visible: boolean; anchor?: AnchorPosition; linkId?: number }>({ visible: false });
   const [editingLink, setEditingLink] = useState<SavedLink | null>(null);
   const [saveToastVisible, setSaveToastVisible] = useState(false);
@@ -74,6 +76,7 @@ export default function HomeScreen() {
           onPress: async () => {
             try {
               await deleteLink(id);
+              await refreshFolders();
               setDeleteToastVisible(true);
             } catch (error) {
               Alert.alert(
@@ -85,7 +88,7 @@ export default function HomeScreen() {
         },
       ]);
     },
-    [deleteLink],
+    [deleteLink, refreshFolders],
   );
 
   const openTitleModal = useCallback((link: SavedLink) => {

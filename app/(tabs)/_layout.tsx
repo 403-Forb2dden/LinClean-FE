@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { ShareIntentRouter } from '@/components/share-intent-router';
 import { BottomTabBar, type TabVariant } from '@/components/ui/bottom-tab-bar';
+import { FoldersProvider } from '@/context/folders-context';
 import { SavedLinksProvider } from '@/context/saved-links-context';
 import { syncAuthenticatedMember } from '@/services/auth-api';
 
@@ -121,15 +122,17 @@ export default function TabLayout() {
 
   return (
     <SavedLinksProvider>
-      <ShareIntentRouter />
-      <Tabs
-        tabBar={(props) => <CustomTabBar {...props} />}
-        screenOptions={{ headerShown: false }}
-      >
-        <Tabs.Screen name="(home)" />
-        <Tabs.Screen name="(folder)" />
-        <Tabs.Screen name="(explore)" options={{ href: null }} />
-      </Tabs>
+      <FoldersProvider>
+        <ShareIntentRouter />
+        <Tabs
+          tabBar={(props) => <CustomTabBar {...props} />}
+          screenOptions={{ headerShown: false }}
+        >
+          <Tabs.Screen name="(home)" />
+          <Tabs.Screen name="(folder)" />
+          <Tabs.Screen name="(explore)" options={{ href: null }} />
+        </Tabs>
+      </FoldersProvider>
     </SavedLinksProvider>
   );
 }

@@ -12,17 +12,31 @@ import { router, Stack } from 'expo-router';
 
 import { Button } from '@/components/ui/button';
 import { Colors, Typography } from '@/constants/theme';
+import { useFolders } from '@/context/folders-context';
 
 export default function FolderNameScreen() {
   const [folderName, setFolderName] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const { folders } = useFolders();
 
   const canProceed = folderName.trim().length > 0;
 
   const handleNext = () => {
+    const trimmedName = folderName.trim();
+    const hasDuplicateName = folders.some(
+      (folder) => normalizeFolderName(folder.name) === normalizeFolderName(trimmedName),
+    );
+
+    if (hasDuplicateName) {
+      setErrorMessage('이미 같은 이름의 폴더가 있어요.');
+      return;
+    }
+
+    setErrorMessage('');
     router.push({
       pathname: '/(tabs)/(folder)/folder-url-select',
-      params: { folderName: folderName.trim() },
+      params: { folderName: trimmedName },
     });
   };
 
@@ -57,7 +71,12 @@ export default function FolderNameScreen() {
                 <TextInput
                   style={styles.input}
                   value={folderName}
-                  onChangeText={setFolderName}
+                  onChangeText={(value) => {
+                    setFolderName(value);
+                    if (errorMessage) {
+                      setErrorMessage('');
+                    }
+                  }}
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setIsFocused(false)}
                   placeholder="폴더 이름 입력"
@@ -76,6 +95,7 @@ export default function FolderNameScreen() {
                   </TouchableOpacity>
                 )}
               </View>
+              {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
               <Text style={styles.helperText}>
                 {'이 이름으로 폴더가 생성되고,\n다음 단계에서 URL을 고를 수 있어요.'}
               </Text>
@@ -168,7 +188,15 @@ const styles = StyleSheet.create({
     color: Colors.brand.textSecondary,
     lineHeight: 20,
   },
+  errorText: {
+    ...Typography.caption,
+    color: Colors.brand.textWarning,
+  },
   buttonArea: {
     marginTop: 32,
   },
 });
+
+function normalizeFolderName(name: string) {
+  return name.trim().toLocaleLowerCase();
+}

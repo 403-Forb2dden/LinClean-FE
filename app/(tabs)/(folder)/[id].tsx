@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -8,7 +8,7 @@ import { CardLink } from '@/components/ui/card-link';
 import { FolderContextMenu } from '@/components/ui/folder-context-menu';
 import { Toast } from '@/components/ui/toast';
 import { Colors, Typography } from '@/constants/theme';
-import { useSavedLinks } from '@/context/saved-links-context';
+import { getSavedLinkErrorMessage, useSavedLinks } from '@/context/saved-links-context';
 import { useFolders } from '@/context/folders-context';
 import type { AnchorPosition } from '@/components/ui/folder-card';
 import { useEffect, useState } from 'react';
@@ -25,7 +25,7 @@ export default function FolderDetailScreen() {
   const folderId = Number(id);
 
   const { links, toggleBookmark, assignCategory } = useSavedLinks();
-  const { folders } = useFolders();
+  const { folders, refreshFolders } = useFolders();
   const folderLinks = links.filter((l) => l.categoryId === folderId);
   const folderName = folders.find((f) => f.id === folderId)?.name ?? '폴더';
 
@@ -41,10 +41,17 @@ export default function FolderDetailScreen() {
     setMenuState({ visible: true, anchor, linkId });
   };
 
-  const handleDelete = (linkId: number) => {
-    // API: PATCH /api/v1/saved-links/{id} { categoryId: null }
-    assignCategory([linkId], null);
-    setToastVisible(true);
+  const handleDelete = async (linkId: number) => {
+    try {
+      await assignCategory([linkId], null);
+      await refreshFolders();
+      setToastVisible(true);
+    } catch (error) {
+      Alert.alert(
+        '폴더에서 삭제 실패',
+        getSavedLinkErrorMessage(error, '링크를 폴더에서 제외하지 못했습니다. 잠시 후 다시 시도해주세요.'),
+      );
+    }
   };
 
   const handleAddUrl = () => {
@@ -134,8 +141,7 @@ export default function FolderDetailScreen() {
             destructive: true,
             onPress: () => {
               if (menuState.linkId == null) return;
-              // API: PATCH /api/v1/saved-links/{id} { categoryId: null }
-              handleDelete(menuState.linkId);
+              void handleDelete(menuState.linkId);
             },
           },
         ]}

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -19,18 +19,8 @@ import { TitleEditModal } from '@/components/ui/title-edit-modal';
 import { Toast } from '@/components/ui/toast';
 import type { AnchorPosition } from '@/components/ui/folder-card';
 import { Colors, Typography } from '@/constants/theme';
+import { useFolders } from '@/context/folders-context';
 import { getSavedLinkErrorMessage, useSavedLinks, type SavedLink } from '@/context/saved-links-context';
-
-// ─── 폴더 필터 칩 아이템 ──────────────────────────────────────────────────────
-// 실제 구현 시 GET /api/v1/categories 응답으로 교체
-
-// 폴더명은 folder/index.tsx MOCK_FOLDERS와 동일하게 유지 (API 연동 시 GET /categories로 교체)
-const FOLDER_ITEMS: FilterChipItem[] = [
-  { label: '전체', value: 'all' },
-  { label: '맛집 정보', value: '1' },
-  { label: '취업', value: '2' },
-  { label: '취미', value: '3' },
-];
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -47,6 +37,11 @@ export default function SavedLinksScreen() {
     deleteLink,
     updateTitle,
   } = useSavedLinks();
+  const {
+    folders,
+    errorMessage: folderErrorMessage,
+    refreshFolders,
+  } = useFolders();
 
   const [selectedFolder, setSelectedFolder] = useState('all');
   const [bookmarkFilter, setBookmarkFilter] = useState(false);
@@ -57,6 +52,14 @@ export default function SavedLinksScreen() {
   const [editingLink, setEditingLink] = useState<SavedLink | null>(null);
   const [deleteToastVisible, setDeleteToastVisible] = useState(false);
   const [titleToastVisible, setTitleToastVisible] = useState(false);
+
+  const folderItems = useMemo<FilterChipItem[]>(
+    () => [
+      { label: '전체', value: 'all' },
+      ...folders.map((folder) => ({ label: folder.name, value: String(folder.id) })),
+    ],
+    [folders],
+  );
 
   const displayLinks = useMemo(() => {
     const folderFiltered =
@@ -70,6 +73,16 @@ export default function SavedLinksScreen() {
 
     return folderFiltered.filter((link) => link.isBookmarked);
   }, [links, selectedFolder, bookmarkFilter]);
+
+  useEffect(() => {
+    if (selectedFolder === 'all') {
+      return;
+    }
+
+    if (!folders.some((folder) => String(folder.id) === selectedFolder)) {
+      setSelectedFolder('all');
+    }
+  }, [folders, selectedFolder]);
 
   const openTitleModal = useCallback((link: SavedLink) => {
     setEditingLink(link);
@@ -99,6 +112,7 @@ export default function SavedLinksScreen() {
           onPress: async () => {
             try {
               await deleteLink(id);
+              await refreshFolders();
               setDeleteToastVisible(true);
             } catch (error) {
               Alert.alert(
@@ -110,7 +124,7 @@ export default function SavedLinksScreen() {
         },
       ]);
     },
-    [deleteLink],
+    [deleteLink, refreshFolders],
   );
 
   const openMoreMenu = useCallback(
@@ -151,7 +165,7 @@ export default function SavedLinksScreen() {
       <View style={styles.chipRow}>
         <FilterChip
           variant="active"
-          items={FOLDER_ITEMS}
+          items={folderItems}
           selectedValue={selectedFolder}
           onSelect={setSelectedFolder}
         />
@@ -166,6 +180,11 @@ export default function SavedLinksScreen() {
           <Text style={styles.errorText}>{errorMessage}</Text>
         </View>
       ) : null}
+      {folderErrorMessage ? (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{folderErrorMessage}</Text>
+        </View>
+      ) : null}
 
       {/* 링크 목록 */}
       <FlatList
@@ -177,7 +196,7 @@ export default function SavedLinksScreen() {
           <RefreshControl
             refreshing={isLoading}
             onRefresh={() => {
-              void refreshLinks();
+              void Promise.all([refreshLinks(), refreshFolders()]);
             }}
             tintColor={Colors.brand.primary}
           />

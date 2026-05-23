@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import {
+  Alert,
   FlatList,
   StyleSheet,
   Text,
@@ -11,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { CardLink } from '@/components/ui/card-link';
 import { SelectionCircle } from '@/components/ui/selection-circle';
 import { Colors, Typography } from '@/constants/theme';
-import { useFolders } from '@/context/folders-context';
+import { getFolderErrorMessage, useFolders } from '@/context/folders-context';
 import { useSavedLinks, type SavedLink } from '@/context/saved-links-context';
 
 // ─── Selectable card row ──────────────────────────────────────────────────────
@@ -52,8 +53,9 @@ export default function FolderUrlSelectScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [isCreating, setIsCreating] = useState(false);
   const { addFolder } = useFolders();
-  const { links: allLinks, assignCategory } = useSavedLinks();
+  const { links: allLinks, refreshLinks } = useSavedLinks();
   const links = allLinks.filter((l) => l.categoryId === null);
+  const name = (folderName ?? '새 폴더').trim();
 
   const toggleSelect = useCallback((id: number) => {
     setSelectedIds((prev) => {
@@ -71,19 +73,20 @@ export default function FolderUrlSelectScreen() {
     if (isCreating) return;
     setIsCreating(true);
     try {
-      // TODO: POST /api/v1/categories { name: folderName } 로 교체
-      const newId = addFolder(folderName ?? '새 폴더');
-      if (selectedIds.size > 0) {
-        assignCategory([...selectedIds], newId);
-      }
+      await addFolder(name, [...selectedIds]);
+      await refreshLinks();
       router.dismissAll();
+    } catch (error) {
+      Alert.alert(
+        '폴더 생성 실패',
+        getFolderErrorMessage(error, '폴더를 생성하지 못했습니다. 잠시 후 다시 시도해주세요.'),
+      );
     } finally {
       setIsCreating(false);
     }
   };
 
   const selectedCount = selectedIds.size;
-  const name = folderName ?? '새 폴더';
 
   return (
     <>
