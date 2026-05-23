@@ -45,9 +45,15 @@ export default function FolderScreen() {
     deleteFolder,
   } = useFolders();
   const [menuState, setMenuState] = useState<MenuState>({ visible: false });
-  const [renameState, setRenameState] = useState<{ visible: boolean; folderId?: number; value: string }>({
+  const [renameState, setRenameState] = useState<{
+    visible: boolean;
+    folderId?: number;
+    value: string;
+    currentName: string;
+  }>({
     visible: false,
     value: '',
+    currentName: '',
   });
   const [isMutating, setIsMutating] = useState(false);
   const [createToastVisible, setCreateToastVisible] = useState(false);
@@ -78,17 +84,18 @@ export default function FolderScreen() {
   const handleEditName = () => {
     if (menuState.folderId == null) return;
     const current = folders.find((f) => f.id === menuState.folderId)?.name ?? '';
-    setRenameState({ visible: true, folderId: menuState.folderId, value: current });
+    setRenameState({ visible: true, folderId: menuState.folderId, value: current, currentName: current });
     setTimeout(() => renameInputRef.current?.focus(), 100);
   };
 
   const handleRenameConfirm = async () => {
     const trimmed = renameState.value.trim();
-    if (renameState.folderId == null || !trimmed || isMutating) return;
+    const currentName = renameState.currentName.trim();
+    if (renameState.folderId == null || !trimmed || trimmed === currentName || isMutating) return;
     setIsMutating(true);
     try {
       await renameFolder(renameState.folderId, trimmed);
-      setRenameState({ visible: false, value: '' });
+      setRenameState({ visible: false, value: '', currentName: '' });
       setRenameToastVisible(true);
     } catch (error) {
       Alert.alert(
@@ -101,7 +108,7 @@ export default function FolderScreen() {
   };
 
   const handleRenameCancel = () => {
-    setRenameState({ visible: false, value: '' });
+    setRenameState({ visible: false, value: '', currentName: '' });
   };
 
   const handleDelete = () => {
@@ -136,6 +143,12 @@ export default function FolderScreen() {
   const handleAddFolder = () => {
     router.push('/folder-name');
   };
+
+  const trimmedRenameValue = renameState.value.trim();
+  const renameSubmitDisabled =
+    trimmedRenameValue.length === 0 ||
+    trimmedRenameValue === renameState.currentName.trim() ||
+    isMutating;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -262,11 +275,11 @@ export default function FolderScreen() {
                 <Text style={renameStyles.cancelText}>취소</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[renameStyles.confirmBtn, !renameState.value.trim() && renameStyles.confirmBtnDisabled]}
+                style={[renameStyles.confirmBtn, renameSubmitDisabled && renameStyles.confirmBtnDisabled]}
                 onPress={handleRenameConfirm}
-                disabled={!renameState.value.trim() || isMutating}
+                disabled={renameSubmitDisabled}
               >
-                <Text style={[renameStyles.confirmText, !renameState.value.trim() && renameStyles.confirmTextDisabled]}>
+                <Text style={[renameStyles.confirmText, renameSubmitDisabled && renameStyles.confirmTextDisabled]}>
                   저장
                 </Text>
               </TouchableOpacity>
