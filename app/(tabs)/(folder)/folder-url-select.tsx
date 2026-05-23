@@ -74,20 +74,28 @@ export default function FolderUrlSelectScreen() {
     setIsCreating(true);
     try {
       await addFolder(name, [...selectedIds]);
-      await refreshLinks();
-      router.dismissAll();
-      router.replace({
-        pathname: '/(tabs)/(folder)',
-        params: { folderCreated: String(Date.now()) },
-      });
     } catch (error) {
       Alert.alert(
         '폴더 생성 실패',
         getFolderErrorMessage(error, '폴더를 생성하지 못했습니다. 잠시 후 다시 시도해주세요.'),
       );
+      setIsCreating(false);
+      return;
+    }
+
+    try {
+      await refreshLinks();
+    } catch {
+      // Link refresh is best-effort after the folder has already been created.
     } finally {
       setIsCreating(false);
     }
+
+    router.dismissAll();
+    router.replace({
+      pathname: '/(tabs)/(folder)',
+      params: { folderCreated: String(Date.now()) },
+    });
   };
 
   const selectedCount = selectedIds.size;
