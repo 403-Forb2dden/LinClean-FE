@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,11 +14,12 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AddFolderButton } from '@/components/ui/add-folder-button';
 import { FolderCard } from '@/components/ui/folder-card';
 import { FolderContextMenu } from '@/components/ui/folder-context-menu';
 import { SectionHeader } from '@/components/ui/section-header';
+import { Toast } from '@/components/ui/toast';
 import { Colors, Typography } from '@/constants/theme';
 import type { AnchorPosition } from '@/components/ui/folder-card';
 import { useSavedLinks } from '@/context/saved-links-context';
@@ -32,6 +33,9 @@ type MenuState = {
 
 export default function FolderScreen() {
   const router = useRouter();
+  const { folderCreated: folderCreatedParam } = useLocalSearchParams<{
+    folderCreated?: string | string[];
+  }>();
   const { refreshLinks } = useSavedLinks();
   const {
     folders: rawFolders,
@@ -46,7 +50,11 @@ export default function FolderScreen() {
     value: '',
   });
   const [isMutating, setIsMutating] = useState(false);
+  const [createToastVisible, setCreateToastVisible] = useState(false);
+  const [deleteToastVisible, setDeleteToastVisible] = useState(false);
+  const lastCreatedToastRef = useRef<string | undefined>(undefined);
   const renameInputRef = useRef<TextInput>(null);
+  const folderCreated = typeof folderCreatedParam === 'string' ? folderCreatedParam : undefined;
 
   const folders = useMemo(
     () => rawFolders.map((folder) => ({ ...folder })),
@@ -56,6 +64,15 @@ export default function FolderScreen() {
   const handleMorePress = (folderId: number, anchor: AnchorPosition) => {
     setMenuState({ visible: true, anchor, folderId });
   };
+
+  useEffect(() => {
+    if (!folderCreated || lastCreatedToastRef.current === folderCreated) {
+      return;
+    }
+
+    lastCreatedToastRef.current = folderCreated;
+    setCreateToastVisible(true);
+  }, [folderCreated]);
 
   const handleEditName = () => {
     if (menuState.folderId == null) return;
@@ -100,6 +117,7 @@ export default function FolderScreen() {
           try {
             await deleteFolder(folderId);
             await refreshLinks();
+            setDeleteToastVisible(true);
           } catch (error) {
             Alert.alert(
               '폴더 삭제 실패',
@@ -176,6 +194,21 @@ export default function FolderScreen() {
         onEditName={handleEditName}
         onDelete={handleDelete}
         onDismiss={() => setMenuState({ visible: false })}
+      />
+
+      <Toast
+        visible={deleteToastVisible}
+        message="폴더가 삭제되었어요"
+        placement="top"
+        topOffset={96}
+        onHide={() => setDeleteToastVisible(false)}
+      />
+      <Toast
+        visible={createToastVisible}
+        message="폴더가 생성되었어요"
+        placement="top"
+        topOffset={96}
+        onHide={() => setCreateToastVisible(false)}
       />
 
       {/* 폴더명 수정 모달 */}

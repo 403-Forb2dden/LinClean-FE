@@ -76,6 +76,10 @@ export default function FolderUrlSelectScreen() {
       await addFolder(name, [...selectedIds]);
       await refreshLinks();
       router.dismissAll();
+      router.replace({
+        pathname: '/(tabs)/(folder)',
+        params: { folderCreated: String(Date.now()) },
+      });
     } catch (error) {
       Alert.alert(
         '폴더 생성 실패',
