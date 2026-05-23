@@ -52,6 +52,7 @@ export default function FolderScreen() {
   const [isMutating, setIsMutating] = useState(false);
   const [createToastVisible, setCreateToastVisible] = useState(false);
   const [deleteToastVisible, setDeleteToastVisible] = useState(false);
+  const [renameToastVisible, setRenameToastVisible] = useState(false);
   const lastCreatedToastRef = useRef<string | undefined>(undefined);
   const renameInputRef = useRef<TextInput>(null);
   const folderCreated = typeof folderCreatedParam === 'string' ? folderCreatedParam : undefined;
@@ -88,6 +89,7 @@ export default function FolderScreen() {
     try {
       await renameFolder(renameState.folderId, trimmed);
       setRenameState({ visible: false, value: '' });
+      setRenameToastVisible(true);
     } catch (error) {
       Alert.alert(
         '폴더명 수정 실패',
@@ -209,6 +211,13 @@ export default function FolderScreen() {
         placement="top"
         topOffset={96}
         onHide={() => setCreateToastVisible(false)}
+      />
+      <Toast
+        visible={renameToastVisible}
+        message="폴더명이 수정되었어요"
+        placement="top"
+        topOffset={96}
+        onHide={() => setRenameToastVisible(false)}
       />
 
       {/* 폴더명 수정 모달 */}
