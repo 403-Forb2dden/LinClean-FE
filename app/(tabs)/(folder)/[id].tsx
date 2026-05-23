@@ -54,6 +54,23 @@ export default function FolderDetailScreen() {
     }
   };
 
+  const confirmDeleteFromFolder = (linkId: number) => {
+    Alert.alert(
+      '폴더에서 삭제할까요?',
+      '링크는 삭제되지 않아요.\n현재 폴더에서만 제외돼요.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '폴더에서 삭제',
+          style: 'destructive',
+          onPress: () => {
+            void handleDelete(linkId);
+          },
+        },
+      ],
+    );
+  };
+
   const handleAddUrl = () => {
     router.push({
       pathname: '/(tabs)/(folder)/folder-add-url',
@@ -141,7 +158,7 @@ export default function FolderDetailScreen() {
             destructive: true,
             onPress: () => {
               if (menuState.linkId == null) return;
-              void handleDelete(menuState.linkId);
+              confirmDeleteFromFolder(menuState.linkId);
             },
           },
         ]}
