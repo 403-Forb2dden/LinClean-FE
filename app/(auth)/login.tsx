@@ -1,13 +1,14 @@
 import { useAuth, useSSO } from '@clerk/expo';
 import * as AuthSession from 'expo-auth-session';
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useShareIntentContext } from 'expo-share-intent';
 import * as WebBrowser from 'expo-web-browser';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ApiError } from '@/api/api-client';
 import { SocialLoginButton } from '@/components/ui/social-login-button';
 import { Colors, Typography } from '@/constants/theme';
 import { syncAuthenticatedMember } from '@/services/auth-api';
@@ -18,15 +19,51 @@ const CLERK_REDIRECT_URL = AuthSession.makeRedirectUri({
   scheme: 'linclean',
   path: 'sso-callback',
 });
+const MEMBER_SYNC_RETRY_DELAYS_MS = [200, 500, 1000];
 
 WebBrowser.maybeCompleteAuthSession();
+
+type LoginNotice = 'withdrawal-complete' | 'session-expired';
+
+const LOGIN_NOTICE_ALERTS: Record<LoginNotice, { title: string; message: string }> = {
+  'withdrawal-complete': {
+    title: '회원탈퇴 완료',
+    message: '회원탈퇴가 완료되었습니다.',
+  },
+  'session-expired': {
+    title: '세션 만료',
+    message: '현재 세션이 유효하지 않아 로그인 화면으로 이동합니다.',
+  },
+};
+
+function delay(ms: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { getToken, signOut } = useAuth();
   const { startSSOFlow } = useSSO();
   const { hasShareIntent, resetShareIntent, shareIntent } = useShareIntentContext();
+  const { notice } = useLocalSearchParams<{ notice?: LoginNotice }>();
+  const shownNoticeRef = useRef<LoginNotice | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
+
+  useEffect(() => {
+    if (!notice || shownNoticeRef.current === notice) {
+      return;
+    }
+
+    const alert = LOGIN_NOTICE_ALERTS[notice];
+    if (!alert) {
+      return;
+    }
+
+    shownNoticeRef.current = notice;
+    Alert.alert(alert.title, alert.message);
+  }, [notice]);
 
   const handleGoogleLogin = async () => {
     if (isSigningIn) {
@@ -48,22 +85,8 @@ export default function LoginScreen() {
 
       await setActive({ session: createdSessionId });
       sessionActivated = true;
-      await syncAuthenticatedMember(getToken);
-
-      const sharedUrl = hasShareIntent ? getSharedUrlFromIntent(shareIntent) : null;
-
-      if (hasShareIntent) {
-        resetShareIntent(true);
-      }
-
-      if (sharedUrl) {
-        router.replace({
-          pathname: '/(tabs)/(home)/add-link',
-          params: { sharedUrl },
-        });
-      } else {
-        router.replace('/(tabs)/(home)');
-      }
+      await syncAuthenticatedMemberAfterSso();
+      navigateAfterSuccessfulLogin();
     } catch (error) {
       console.error(error);
 
@@ -83,6 +106,43 @@ export default function LoginScreen() {
       setIsSigningIn(false);
     }
   };
+
+  function navigateAfterSuccessfulLogin() {
+    const sharedUrl = hasShareIntent ? getSharedUrlFromIntent(shareIntent) : null;
+
+    if (hasShareIntent) {
+      resetShareIntent(true);
+    }
+
+    if (sharedUrl) {
+      router.replace({
+        pathname: '/(tabs)/(home)/add-link',
+        params: { sharedUrl },
+      });
+    } else {
+      router.replace('/(tabs)/(home)');
+    }
+  }
+
+  async function syncAuthenticatedMemberAfterSso() {
+    let lastError: unknown;
+
+    for (const retryDelayMs of MEMBER_SYNC_RETRY_DELAYS_MS) {
+      await delay(retryDelayMs);
+
+      try {
+        return await syncAuthenticatedMember(() => getToken({ skipCache: true }));
+      } catch (error) {
+        lastError = error;
+
+        if (!(error instanceof ApiError) || error.status !== 401) {
+          throw error;
+        }
+      }
+    }
+
+    throw lastError;
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>

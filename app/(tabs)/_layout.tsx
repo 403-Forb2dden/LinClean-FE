@@ -98,7 +98,7 @@ export default function TabLayout() {
         if (isMounted) {
           syncedSessionIdRef.current = null;
           setHasSyncedMember(false);
-          router.replace('/login' as any);
+          router.replace('/(auth)/login');
         }
       });
 
