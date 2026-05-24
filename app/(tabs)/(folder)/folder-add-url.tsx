@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import {
+  Alert,
   FlatList,
   StyleSheet,
   Text,
@@ -11,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { CardLink } from '@/components/ui/card-link';
 import { SelectionCircle } from '@/components/ui/selection-circle';
 import { Colors, Typography } from '@/constants/theme';
+import { getFolderErrorMessage, useFolders } from '@/context/folders-context';
 import { useSavedLinks, type SavedLink } from '@/context/saved-links-context';
 
 // ─── Selectable card row ──────────────────────────────────────────────────────
@@ -51,6 +53,7 @@ export default function FolderAddUrlScreen() {
     folderName: string;
   }>();
   const { links, assignCategory } = useSavedLinks();
+  const { refreshFolders } = useFolders();
 
   // 미분류 URL만 표시 (categoryId === null)
   const uncategorizedLinks = links.filter((l) => l.categoryId === null);
@@ -74,12 +77,17 @@ export default function FolderAddUrlScreen() {
     if (isAdding || selectedIds.size === 0) return;
     setIsAdding(true);
     try {
-      // PATCH /api/v1/saved-links/{id} { categoryId } — 선택한 링크들을 폴더에 추가
-      assignCategory([...selectedIds], Number(folderId));
+      await assignCategory([...selectedIds], Number(folderId));
+      await refreshFolders();
       router.replace({
         pathname: '/(tabs)/(folder)/[id]',
         params: { id: folderId, urlAdded: '1' },
       });
+    } catch (error) {
+      Alert.alert(
+        'URL 추가 실패',
+        getFolderErrorMessage(error, '선택한 URL을 폴더에 추가하지 못했습니다. 잠시 후 다시 시도해주세요.'),
+      );
     } finally {
       setIsAdding(false);
     }

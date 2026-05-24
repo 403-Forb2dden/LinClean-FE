@@ -1,5 +1,7 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -12,15 +14,16 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AddFolderButton } from '@/components/ui/add-folder-button';
 import { FolderCard } from '@/components/ui/folder-card';
 import { FolderContextMenu } from '@/components/ui/folder-context-menu';
 import { SectionHeader } from '@/components/ui/section-header';
+import { Toast } from '@/components/ui/toast';
 import { Colors, Typography } from '@/constants/theme';
 import type { AnchorPosition } from '@/components/ui/folder-card';
 import { useSavedLinks } from '@/context/saved-links-context';
-import { useFolders } from '@/context/folders-context';
+import { getFolderErrorMessage, useFolders } from '@/context/folders-context';
 
 type MenuState = {
   visible: boolean;
@@ -30,58 +33,122 @@ type MenuState = {
 
 export default function FolderScreen() {
   const router = useRouter();
-  const { links, assignCategory } = useSavedLinks();
-  const { folders: rawFolders, renameFolder, deleteFolder } = useFolders();
+  const { folderCreated: folderCreatedParam } = useLocalSearchParams<{
+    folderCreated?: string | string[];
+  }>();
+  const { refreshLinks } = useSavedLinks();
+  const {
+    folders: rawFolders,
+    isLoading,
+    errorMessage,
+    renameFolder,
+    deleteFolder,
+  } = useFolders();
   const [menuState, setMenuState] = useState<MenuState>({ visible: false });
-  const [renameState, setRenameState] = useState<{ visible: boolean; folderId?: number; value: string }>({
+  const [renameState, setRenameState] = useState<{
+    visible: boolean;
+    folderId?: number;
+    value: string;
+    currentName: string;
+  }>({
     visible: false,
     value: '',
+    currentName: '',
   });
+  const [isMutating, setIsMutating] = useState(false);
+  const [createToastVisible, setCreateToastVisible] = useState(false);
+  const [deleteToastVisible, setDeleteToastVisible] = useState(false);
+  const [renameToastVisible, setRenameToastVisible] = useState(false);
+  const lastCreatedToastRef = useRef<string | undefined>(undefined);
   const renameInputRef = useRef<TextInput>(null);
+  const folderCreated = typeof folderCreatedParam === 'string' ? folderCreatedParam : undefined;
 
   const folders = useMemo(
-    () => rawFolders.map((f) => ({
-      ...f,
-      linkCount: links.filter((l) => l.categoryId === f.id).length,
-    })),
-    [links, rawFolders]
+    () => rawFolders.map((folder) => ({ ...folder })),
+    [rawFolders],
   );
 
   const handleMorePress = (folderId: number, anchor: AnchorPosition) => {
     setMenuState({ visible: true, anchor, folderId });
   };
 
+  useEffect(() => {
+    if (!folderCreated || lastCreatedToastRef.current === folderCreated) {
+      return;
+    }
+
+    lastCreatedToastRef.current = folderCreated;
+    setCreateToastVisible(true);
+  }, [folderCreated]);
+
   const handleEditName = () => {
     if (menuState.folderId == null) return;
     const current = folders.find((f) => f.id === menuState.folderId)?.name ?? '';
-    setRenameState({ visible: true, folderId: menuState.folderId, value: current });
+    setRenameState({ visible: true, folderId: menuState.folderId, value: current, currentName: current });
     setTimeout(() => renameInputRef.current?.focus(), 100);
   };
 
-  const handleRenameConfirm = () => {
+  const handleRenameConfirm = async () => {
     const trimmed = renameState.value.trim();
-    if (renameState.folderId == null || !trimmed) return;
-    renameFolder(renameState.folderId, trimmed);
-    setRenameState({ visible: false, value: '' });
+    const currentName = renameState.currentName.trim();
+    if (renameState.folderId == null || !trimmed || trimmed === currentName || isMutating) return;
+    setIsMutating(true);
+    try {
+      await renameFolder(renameState.folderId, trimmed);
+      setRenameState({ visible: false, value: '', currentName: '' });
+      setRenameToastVisible(true);
+    } catch (error) {
+      Alert.alert(
+        '폴더명 수정 실패',
+        getFolderErrorMessage(error, '폴더 이름을 수정하지 못했습니다. 잠시 후 다시 시도해주세요.'),
+      );
+    } finally {
+      setIsMutating(false);
+    }
   };
 
   const handleRenameCancel = () => {
-    setRenameState({ visible: false, value: '' });
+    setRenameState({ visible: false, value: '', currentName: '' });
   };
 
   const handleDelete = () => {
     if (menuState.folderId == null) return;
     const folderId = menuState.folderId;
-    const linkIds = links.filter((link) => link.categoryId === folderId).map((link) => link.id);
-    if (linkIds.length > 0) {
-      assignCategory(linkIds, null);
-    }
-    deleteFolder(folderId);
+
+    Alert.alert('폴더 삭제', '폴더를 삭제할까요? 폴더 안의 링크는 미분류 상태로 이동합니다.', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: async () => {
+          if (isMutating) return;
+          setIsMutating(true);
+          try {
+            await deleteFolder(folderId);
+            await refreshLinks();
+            setDeleteToastVisible(true);
+          } catch (error) {
+            Alert.alert(
+              '폴더 삭제 실패',
+              getFolderErrorMessage(error, '폴더를 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.'),
+            );
+          } finally {
+            setIsMutating(false);
+          }
+        },
+      },
+    ]);
   };
 
   const handleAddFolder = () => {
     router.push('/folder-name');
   };
+
+  const trimmedRenameValue = renameState.value.trim();
+  const renameSubmitDisabled =
+    trimmedRenameValue.length === 0 ||
+    trimmedRenameValue === renameState.currentName.trim() ||
+    isMutating;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -103,7 +170,17 @@ export default function FolderScreen() {
             rightSlot={<AddFolderButton onPress={handleAddFolder} />}
           />
 
-          {folders.length > 0 ? (
+          {errorMessage ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
+          ) : null}
+
+          {isLoading ? (
+            <View style={styles.loadingState}>
+              <ActivityIndicator color={Colors.brand.primary} />
+            </View>
+          ) : folders.length > 0 ? (
             <View style={styles.grid}>
               {folders.map((folder) => (
                 <FolderCard
@@ -132,6 +209,28 @@ export default function FolderScreen() {
         onEditName={handleEditName}
         onDelete={handleDelete}
         onDismiss={() => setMenuState({ visible: false })}
+      />
+
+      <Toast
+        visible={deleteToastVisible}
+        message="폴더가 삭제되었어요"
+        placement="top"
+        topOffset={96}
+        onHide={() => setDeleteToastVisible(false)}
+      />
+      <Toast
+        visible={createToastVisible}
+        message="폴더가 생성되었어요"
+        placement="top"
+        topOffset={96}
+        onHide={() => setCreateToastVisible(false)}
+      />
+      <Toast
+        visible={renameToastVisible}
+        message="폴더명이 수정되었어요"
+        placement="top"
+        topOffset={96}
+        onHide={() => setRenameToastVisible(false)}
       />
 
       {/* 폴더명 수정 모달 */}
@@ -176,11 +275,11 @@ export default function FolderScreen() {
                 <Text style={renameStyles.cancelText}>취소</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[renameStyles.confirmBtn, !renameState.value.trim() && renameStyles.confirmBtnDisabled]}
+                style={[renameStyles.confirmBtn, renameSubmitDisabled && renameStyles.confirmBtnDisabled]}
                 onPress={handleRenameConfirm}
-                disabled={!renameState.value.trim()}
+                disabled={renameSubmitDisabled}
               >
-                <Text style={[renameStyles.confirmText, !renameState.value.trim() && renameStyles.confirmTextDisabled]}>
+                <Text style={[renameStyles.confirmText, renameSubmitDisabled && renameStyles.confirmTextDisabled]}>
                   저장
                 </Text>
               </TouchableOpacity>
@@ -231,6 +330,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+  },
+  errorBox: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.brand.textWarning,
+    backgroundColor: Colors.brand.surface,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  errorText: {
+    ...Typography.caption,
+    color: Colors.brand.textWarning,
+  },
+  loadingState: {
+    paddingVertical: 40,
+    alignItems: 'center',
   },
 
   emptyState: {

@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -6,9 +6,10 @@ import { AddFolderButton } from '@/components/ui/add-folder-button';
 import { AppIcon } from '@/components/ui/app-icon';
 import { CardLink } from '@/components/ui/card-link';
 import { FolderContextMenu } from '@/components/ui/folder-context-menu';
+import { TitleEditModal } from '@/components/ui/title-edit-modal';
 import { Toast } from '@/components/ui/toast';
 import { Colors, Typography } from '@/constants/theme';
-import { useSavedLinks } from '@/context/saved-links-context';
+import { getSavedLinkErrorMessage, useSavedLinks, type SavedLink } from '@/context/saved-links-context';
 import { useFolders } from '@/context/folders-context';
 import type { AnchorPosition } from '@/components/ui/folder-card';
 import { useEffect, useState } from 'react';
@@ -24,14 +25,16 @@ export default function FolderDetailScreen() {
   const router = useRouter();
   const folderId = Number(id);
 
-  const { links, toggleBookmark, assignCategory } = useSavedLinks();
-  const { folders } = useFolders();
+  const { links, toggleBookmark, assignCategory, updateTitle } = useSavedLinks();
+  const { folders, refreshFolders } = useFolders();
   const folderLinks = links.filter((l) => l.categoryId === folderId);
   const folderName = folders.find((f) => f.id === folderId)?.name ?? '폴더';
 
   const [menuState, setMenuState] = useState<MoreMenuState>({ visible: false });
+  const [editingLink, setEditingLink] = useState<SavedLink | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
   const [addToastVisible, setAddToastVisible] = useState(false);
+  const [titleToastVisible, setTitleToastVisible] = useState(false);
 
   useEffect(() => {
     if (urlAdded === '1') setAddToastVisible(true);
@@ -41,10 +44,34 @@ export default function FolderDetailScreen() {
     setMenuState({ visible: true, anchor, linkId });
   };
 
-  const handleDelete = (linkId: number) => {
-    // API: PATCH /api/v1/saved-links/{id} { categoryId: null }
-    assignCategory([linkId], null);
-    setToastVisible(true);
+  const handleDelete = async (linkId: number) => {
+    try {
+      await assignCategory([linkId], null);
+      await refreshFolders();
+      setToastVisible(true);
+    } catch (error) {
+      Alert.alert(
+        '폴더에서 삭제 실패',
+        getSavedLinkErrorMessage(error, '링크를 폴더에서 제외하지 못했습니다. 잠시 후 다시 시도해주세요.'),
+      );
+    }
+  };
+
+  const confirmDeleteFromFolder = (linkId: number) => {
+    Alert.alert(
+      '폴더에서 삭제할까요?',
+      '링크는 삭제되지 않아요.\n현재 폴더에서만 제외돼요.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '폴더에서 삭제',
+          style: 'destructive',
+          onPress: () => {
+            void handleDelete(linkId);
+          },
+        },
+      ],
+    );
   };
 
   const handleAddUrl = () => {
@@ -55,6 +82,11 @@ export default function FolderDetailScreen() {
   };
 
   const currentLink = folderLinks.find((l) => l.id === menuState.linkId);
+
+  const handleTitleConfirm = async (linkId: number, title: string) => {
+    await updateTitle(linkId, title);
+    setTitleToastVisible(true);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -122,11 +154,10 @@ export default function FolderDetailScreen() {
         anchor={menuState.anchor}
         items={[
           {
-            label: currentLink?.isBookmarked ? '북마크 해제' : '북마크 추가',
+            label: '제목 수정',
             onPress: () => {
-              if (menuState.linkId == null) return;
-              // API: PATCH /saved-links/{id}/bookmark
-              toggleBookmark(menuState.linkId);
+              if (!currentLink) return;
+              setEditingLink(currentLink);
             },
           },
           {
@@ -134,12 +165,25 @@ export default function FolderDetailScreen() {
             destructive: true,
             onPress: () => {
               if (menuState.linkId == null) return;
-              // API: PATCH /api/v1/saved-links/{id} { categoryId: null }
-              handleDelete(menuState.linkId);
+              confirmDeleteFromFolder(menuState.linkId);
             },
           },
         ]}
         onDismiss={() => setMenuState({ visible: false })}
+      />
+
+      <TitleEditModal
+        editingLink={editingLink}
+        onConfirm={handleTitleConfirm}
+        onClose={() => setEditingLink(null)}
+      />
+
+      <Toast
+        visible={titleToastVisible}
+        message="제목이 수정되었습니다."
+        placement="top"
+        topOffset={96}
+        onHide={() => setTitleToastVisible(false)}
       />
     </SafeAreaView>
   );
