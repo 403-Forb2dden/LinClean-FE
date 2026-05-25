@@ -14,6 +14,10 @@ import {
 
 import { Colors, Typography } from '@/constants/theme';
 import { getSavedLinkErrorMessage, type SavedLink } from '@/context/saved-links-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const MODAL_BOTTOM_GAP = 16;
+const KEYBOARD_TOP_GAP = 8;
 
 interface TitleEditModalProps {
   editingLink: SavedLink | null;
@@ -22,6 +26,7 @@ interface TitleEditModalProps {
 }
 
 export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditModalProps) {
+  const insets = useSafeAreaInsets();
   const [titleValue, setTitleValue] = useState('');
   const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
   const [keyboardInset, setKeyboardInset] = useState(0);
@@ -94,6 +99,10 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
     trimmedTitleValue.length > 500 ||
     trimmedTitleValue === editingLink?.title.trim() ||
     isUpdatingTitle;
+  const restingBottomInset = Math.max(insets.bottom, MODAL_BOTTOM_GAP);
+  const modalBottomInset = keyboardInset > 0
+    ? keyboardInset + KEYBOARD_TOP_GAP
+    : restingBottomInset;
 
   return (
     <Modal
@@ -105,7 +114,7 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
       <View
         style={[
           styles.overlay,
-          keyboardInset > 0 && { paddingBottom: keyboardInset },
+          { paddingBottom: modalBottomInset },
         ]}
       >
         <Pressable style={styles.backdrop} onPress={handleClose} />

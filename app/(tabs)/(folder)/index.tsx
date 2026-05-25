@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AddFolderButton } from '@/components/ui/add-folder-button';
 import { FolderCard } from '@/components/ui/folder-card';
@@ -30,7 +30,11 @@ type MenuState = {
   folderId?: number;
 };
 
+const RENAME_MODAL_BOTTOM_GAP = 16;
+const RENAME_KEYBOARD_TOP_GAP = 8;
+
 export default function FolderScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { folderCreated: folderCreatedParam } = useLocalSearchParams<{
     folderCreated?: string | string[];
@@ -168,6 +172,10 @@ export default function FolderScreen() {
     trimmedRenameValue.length === 0 ||
     trimmedRenameValue === renameState.currentName.trim() ||
     isMutating;
+  const renameRestingBottomInset = Math.max(insets.bottom, RENAME_MODAL_BOTTOM_GAP);
+  const renameModalBottomInset = renameKeyboardInset > 0
+    ? renameKeyboardInset + RENAME_KEYBOARD_TOP_GAP
+    : renameRestingBottomInset;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -262,7 +270,7 @@ export default function FolderScreen() {
         <View
           style={[
             renameStyles.overlay,
-            renameKeyboardInset > 0 && { paddingBottom: renameKeyboardInset },
+            { paddingBottom: renameModalBottomInset },
           ]}
         >
           <Pressable style={renameStyles.backdrop} onPress={handleRenameCancel} />
