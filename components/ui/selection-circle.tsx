@@ -30,6 +30,7 @@ const styles = StyleSheet.create({
     borderRadius: CIRCLE_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'visible',
   },
   unselected: {
     backgroundColor: Colors.brand.surface,
@@ -46,6 +47,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderRightWidth: 2,
     borderColor: Colors.brand.onPrimary,
+    zIndex: 2,
+    elevation: 2,
     transform: [{ rotate: '45deg' }, { translateY: -2 }],
   },
 });
