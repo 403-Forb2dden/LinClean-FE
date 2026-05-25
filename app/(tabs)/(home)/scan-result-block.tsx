@@ -12,6 +12,7 @@ import {
   getAnalysisResultPath,
   getRouteParam,
 } from '@/utils/analysis-result-display';
+import { useGuardedPress } from '@/utils/press-guard';
 
 export default function ScanResultBlockScreen() {
   const {
@@ -25,6 +26,7 @@ export default function ScanResultBlockScreen() {
   const reason = getAnalysisReasonText(analysis, getMockScanResultReason('danger'));
   const shouldRedirectToVerdict = Boolean(analysis?.verdict && analysis.verdict !== 'danger');
   const isVerifyingAnalysis = Boolean(analysisId) && !errorMessage && (!analysis?.verdict || isLoading);
+  const guardedDismissAll = useGuardedPress(() => router.dismissAll());
 
   useEffect(() => {
     if (!analysis?.verdict || analysis.verdict === 'danger') {
@@ -105,7 +107,7 @@ export default function ScanResultBlockScreen() {
         <View style={styles.buttonArea}>
           <TouchableOpacity
             style={styles.confirmButton}
-            onPress={() => router.dismissAll()}
+            onPress={guardedDismissAll}
             activeOpacity={0.8}
           >
             <Text style={styles.confirmButtonText}>확인</Text>

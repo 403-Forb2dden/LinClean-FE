@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View, type PressableProps } from 'react-native';
 
 import { Colors, Typography } from '@/constants/theme';
+import { useGuardedPress } from '@/utils/press-guard';
 
 export type SocialLoginProvider = 'google' | 'apple';
 
@@ -13,16 +14,20 @@ interface SocialLoginButtonProps extends Omit<PressableProps, 'children' | 'styl
   label: string;
 }
 
-export function SocialLoginButton({ provider, label, disabled, ...rest }: SocialLoginButtonProps) {
+export function SocialLoginButton({ provider, label, disabled, onPress, ...rest }: SocialLoginButtonProps) {
+  const isDisabled = Boolean(disabled);
+  const guardedOnPress = useGuardedPress(onPress ?? undefined, { disabled: isDisabled });
+
   return (
     <Pressable
       accessibilityRole="button"
-      disabled={disabled}
+      disabled={isDisabled}
+      onPress={guardedOnPress}
       style={({ pressed }) => [
         styles.base,
         styles[provider],
         pressed && styles.pressed,
-        disabled && styles.disabled,
+        isDisabled && styles.disabled,
       ]}
       {...rest}
     >

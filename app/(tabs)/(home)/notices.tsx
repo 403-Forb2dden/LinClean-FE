@@ -16,6 +16,7 @@ import { fetchNotices, type NoticeListItemResponse } from '@/api/notices';
 import { AppIcon } from '@/components/ui/app-icon';
 import { Button } from '@/components/ui/button';
 import { Colors, Typography } from '@/constants/theme';
+import { useGuardedPress } from '@/utils/press-guard';
 
 const NOTICE_PAGE_SIZE = 20;
 
@@ -144,18 +145,19 @@ export default function NoticesScreen() {
   const handleRetry = useCallback(() => {
     startLoadNotices();
   }, [startLoadNotices]);
+  const guardedOpenNotice = useGuardedPress((id: number) =>
+    router.push({
+      pathname: '/(tabs)/(home)/notice-detail' as any,
+      params: { id: String(id) },
+    }),
+  );
 
   const renderNotice = useCallback(
     ({ item }: { item: NoticeListItemResponse }) => (
       <TouchableOpacity
         style={styles.noticeItem}
         activeOpacity={0.7}
-        onPress={() =>
-          router.push({
-            pathname: '/(tabs)/(home)/notice-detail' as any,
-            params: { id: String(item.id) },
-          })
-        }
+        onPress={() => guardedOpenNotice?.(item.id)}
       >
         <View style={styles.noticeTop}>
           {item.isPinned && (
@@ -168,7 +170,7 @@ export default function NoticesScreen() {
         <Text style={styles.noticeDate}>{formatDate(item.createdAt)}</Text>
       </TouchableOpacity>
     ),
-    [],
+    [guardedOpenNotice],
   );
 
   return (

@@ -1,6 +1,7 @@
 import { StyleSheet, Text, TouchableOpacity, type TouchableOpacityProps } from 'react-native';
 
 import { Colors, Typography } from '@/constants/theme';
+import { useGuardedPress } from '@/utils/press-guard';
 
 export interface AddFolderButtonProps extends Omit<TouchableOpacityProps, 'style'> {
   label?: string;
@@ -15,10 +16,12 @@ export function AddFolderButton({
   onPress,
   ...rest
 }: AddFolderButtonProps) {
+  const guardedOnPress = useGuardedPress(onPress, { disabled });
+
   return (
     <TouchableOpacity
       style={[styles.base, disabled && styles.disabled]}
-      onPress={onPress}
+      onPress={guardedOnPress}
       disabled={disabled}
       activeOpacity={0.75}
       {...rest}

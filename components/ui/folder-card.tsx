@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Typography } from '@/constants/theme';
+import { useGuardedPress } from '@/utils/press-guard';
 import { AppIcon } from './app-icon';
 
 export interface AnchorPosition {
@@ -27,17 +28,19 @@ export function FolderCard({
   disabled = false,
 }: FolderCardProps) {
   const moreRef = useRef<View>(null);
+  const guardedOnPress = useGuardedPress(onPress, { disabled });
+  const guardedOnMorePress = useGuardedPress(onMorePress, { disabled });
 
   const handleMorePress = () => {
     moreRef.current?.measure((_fx, _fy, width, height, px, py) => {
-      onMorePress?.({ x: px, y: py, width, height });
+      guardedOnMorePress?.({ x: px, y: py, width, height });
     });
   };
 
   return (
     <Pressable
       style={({ pressed }) => [pressed && !disabled && styles.pressed]}
-      onPress={disabled ? undefined : onPress}
+      onPress={guardedOnPress}
       accessibilityRole="button"
       accessibilityLabel={`${folderName} 폴더, ${urlCount}개`}
       accessibilityState={{ disabled }}

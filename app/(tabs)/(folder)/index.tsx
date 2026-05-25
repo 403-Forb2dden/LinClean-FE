@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -24,6 +23,8 @@ import { Colors, Typography } from '@/constants/theme';
 import type { AnchorPosition } from '@/components/ui/folder-card';
 import { useSavedLinks } from '@/context/saved-links-context';
 import { getFolderErrorMessage, useFolders } from '@/context/folders-context';
+import { showAlert } from '@/utils/guarded-alert';
+import { useGuardedPress } from '@/utils/press-guard';
 
 type MenuState = {
   visible: boolean;
@@ -60,6 +61,7 @@ export default function FolderScreen() {
   const [deleteToastVisible, setDeleteToastVisible] = useState(false);
   const [renameToastVisible, setRenameToastVisible] = useState(false);
   const lastCreatedToastRef = useRef<string | undefined>(undefined);
+  const isMutatingRef = useRef(false);
   const renameInputRef = useRef<TextInput>(null);
   const folderCreated = typeof folderCreatedParam === 'string' ? folderCreatedParam : undefined;
 
@@ -91,23 +93,29 @@ export default function FolderScreen() {
   const handleRenameConfirm = async () => {
     const trimmed = renameState.value.trim();
     const currentName = renameState.currentName.trim();
-    if (renameState.folderId == null || !trimmed || trimmed === currentName || isMutating) return;
+    if (renameState.folderId == null || !trimmed || trimmed === currentName || isMutatingRef.current) return;
+    isMutatingRef.current = true;
     setIsMutating(true);
     try {
       await renameFolder(renameState.folderId, trimmed);
       setRenameState({ visible: false, value: '', currentName: '' });
       setRenameToastVisible(true);
     } catch (error) {
-      Alert.alert(
+      showAlert(
         '폴더명 수정 실패',
         getFolderErrorMessage(error, '폴더 이름을 수정하지 못했습니다. 잠시 후 다시 시도해주세요.'),
       );
     } finally {
+      isMutatingRef.current = false;
       setIsMutating(false);
     }
   };
 
   const handleRenameCancel = () => {
+    if (isMutatingRef.current) {
+      return;
+    }
+
     setRenameState({ visible: false, value: '', currentName: '' });
   };
 
@@ -115,24 +123,26 @@ export default function FolderScreen() {
     if (menuState.folderId == null) return;
     const folderId = menuState.folderId;
 
-    Alert.alert('폴더 삭제', '폴더를 삭제할까요? 폴더 안의 링크는 미분류 상태로 이동합니다.', [
+    showAlert('폴더 삭제', '폴더를 삭제할까요? 폴더 안의 링크는 미분류 상태로 이동합니다.', [
       { text: '취소', style: 'cancel' },
       {
         text: '삭제',
         style: 'destructive',
         onPress: async () => {
-          if (isMutating) return;
+          if (isMutatingRef.current) return;
+          isMutatingRef.current = true;
           setIsMutating(true);
           try {
             await deleteFolder(folderId);
             await refreshLinks();
             setDeleteToastVisible(true);
           } catch (error) {
-            Alert.alert(
+            showAlert(
               '폴더 삭제 실패',
               getFolderErrorMessage(error, '폴더를 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.'),
             );
           } finally {
+            isMutatingRef.current = false;
             setIsMutating(false);
           }
         },
@@ -149,6 +159,12 @@ export default function FolderScreen() {
     trimmedRenameValue.length === 0 ||
     trimmedRenameValue === renameState.currentName.trim() ||
     isMutating;
+  const guardedRenameCancel = useGuardedPress(handleRenameCancel, { disabled: isMutating, lockMs: 250 });
+  const guardedRenameConfirm = useGuardedPress(handleRenameConfirm, { disabled: renameSubmitDisabled });
+  const guardedClearRename = useGuardedPress(
+    () => setRenameState((s) => ({ ...s, value: '' })),
+    { disabled: isMutating, lockMs: 250 },
+  );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -238,13 +254,13 @@ export default function FolderScreen() {
         visible={renameState.visible}
         transparent
         animationType="fade"
-        onRequestClose={handleRenameCancel}
+        onRequestClose={guardedRenameCancel}
       >
         <KeyboardAvoidingView
           style={renameStyles.overlay}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <Pressable style={renameStyles.backdrop} onPress={handleRenameCancel} />
+          <Pressable style={renameStyles.backdrop} onPress={guardedRenameCancel} />
           <View style={renameStyles.sheet}>
             <Text style={renameStyles.sheetTitle}>폴더명 수정</Text>
             <View style={renameStyles.inputRow}>
@@ -256,13 +272,13 @@ export default function FolderScreen() {
                 placeholder="폴더 이름 입력"
                 placeholderTextColor={Colors.brand.textHint}
                 returnKeyType="done"
-                onSubmitEditing={handleRenameConfirm}
+                onSubmitEditing={guardedRenameConfirm}
                 maxLength={50}
                 autoFocus
               />
               {renameState.value.length > 0 && (
                 <TouchableOpacity
-                  onPress={() => setRenameState((s) => ({ ...s, value: '' }))}
+                  onPress={guardedClearRename}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   style={renameStyles.clearButton}
                 >
@@ -271,12 +287,12 @@ export default function FolderScreen() {
               )}
             </View>
             <View style={renameStyles.actions}>
-              <TouchableOpacity style={renameStyles.cancelBtn} onPress={handleRenameCancel}>
+              <TouchableOpacity style={renameStyles.cancelBtn} onPress={guardedRenameCancel}>
                 <Text style={renameStyles.cancelText}>취소</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[renameStyles.confirmBtn, renameSubmitDisabled && renameStyles.confirmBtnDisabled]}
-                onPress={handleRenameConfirm}
+                onPress={guardedRenameConfirm}
                 disabled={renameSubmitDisabled}
               >
                 <Text style={[renameStyles.confirmText, renameSubmitDisabled && renameStyles.confirmTextDisabled]}>

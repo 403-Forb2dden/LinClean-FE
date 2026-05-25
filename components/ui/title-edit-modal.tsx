@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -14,6 +13,8 @@ import {
 
 import { Colors, Typography } from '@/constants/theme';
 import { getSavedLinkErrorMessage, type SavedLink } from '@/context/saved-links-context';
+import { showAlert } from '@/utils/guarded-alert';
+import { useGuardedPress } from '@/utils/press-guard';
 
 interface TitleEditModalProps {
   editingLink: SavedLink | null;
@@ -59,7 +60,7 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
       await onConfirm(editingLink.id, trimmedTitle);
       onClose();
     } catch (error) {
-      Alert.alert(
+      showAlert(
         '제목 수정 실패',
         getSavedLinkErrorMessage(error, '제목을 수정하지 못했습니다. 잠시 후 다시 시도해주세요.'),
       );
@@ -74,19 +75,25 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
     trimmedTitleValue.length > 500 ||
     trimmedTitleValue === editingLink?.title.trim() ||
     isUpdatingTitle;
+  const guardedClose = useGuardedPress(handleClose, { disabled: isUpdatingTitle, lockMs: 250 });
+  const guardedConfirm = useGuardedPress(handleConfirm, { disabled: titleSubmitDisabled });
+  const guardedClearTitle = useGuardedPress(() => setTitleValue(''), {
+    disabled: isUpdatingTitle,
+    lockMs: 250,
+  });
 
   return (
     <Modal
       visible={editingLink !== null}
       transparent
       animationType="fade"
-      onRequestClose={handleClose}
+      onRequestClose={guardedClose}
     >
       <KeyboardAvoidingView
         style={styles.overlay}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <Pressable style={styles.backdrop} onPress={handleClose} />
+        <Pressable style={styles.backdrop} onPress={guardedClose} />
         <View style={styles.sheet}>
           <Text style={styles.sheetTitle}>제목 수정</Text>
           <View style={styles.inputRow}>
@@ -98,14 +105,14 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
               placeholder="URL 제목 입력"
               placeholderTextColor={Colors.brand.textHint}
               returnKeyType="done"
-              onSubmitEditing={handleConfirm}
+              onSubmitEditing={guardedConfirm}
               maxLength={500}
               editable={!isUpdatingTitle}
               autoFocus
             />
             {titleValue.length > 0 && !isUpdatingTitle && (
               <TouchableOpacity
-                onPress={() => setTitleValue('')}
+                onPress={guardedClearTitle}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 style={styles.clearButton}
               >
@@ -116,14 +123,14 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
           <View style={styles.actions}>
             <TouchableOpacity
               style={styles.cancelBtn}
-              onPress={handleClose}
+              onPress={guardedClose}
               disabled={isUpdatingTitle}
             >
               <Text style={styles.cancelText}>취소</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.confirmBtn, titleSubmitDisabled && styles.confirmBtnDisabled]}
-              onPress={handleConfirm}
+              onPress={guardedConfirm}
               disabled={titleSubmitDisabled}
             >
               <Text style={[styles.confirmText, titleSubmitDisabled && styles.confirmTextDisabled]}>
