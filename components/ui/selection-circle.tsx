@@ -47,6 +47,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderRightWidth: 2,
     borderColor: Colors.brand.onPrimary,
+    zIndex: 2,
+    elevation: 2,
     transform: [{ rotate: '45deg' }, { translateY: -2 }],
   },
 });
