@@ -2,9 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
+  Keyboard,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -56,6 +55,7 @@ export default function FolderScreen() {
     currentName: '',
   });
   const [isMutating, setIsMutating] = useState(false);
+  const [renameKeyboardInset, setRenameKeyboardInset] = useState(0);
   const [createToastVisible, setCreateToastVisible] = useState(false);
   const [deleteToastVisible, setDeleteToastVisible] = useState(false);
   const [renameToastVisible, setRenameToastVisible] = useState(false);
@@ -80,6 +80,25 @@ export default function FolderScreen() {
     lastCreatedToastRef.current = folderCreated;
     setCreateToastVisible(true);
   }, [folderCreated]);
+
+  useEffect(() => {
+    if (!renameState.visible) {
+      setRenameKeyboardInset(0);
+      return;
+    }
+
+    const showSubscription = Keyboard.addListener('keyboardDidShow', (event) => {
+      setRenameKeyboardInset(event.endCoordinates.height);
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setRenameKeyboardInset(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [renameState.visible]);
 
   const handleEditName = () => {
     if (menuState.folderId == null) return;
@@ -240,52 +259,63 @@ export default function FolderScreen() {
         animationType="fade"
         onRequestClose={handleRenameCancel}
       >
-        <KeyboardAvoidingView
-          style={renameStyles.overlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        <View
+          style={[
+            renameStyles.overlay,
+            renameKeyboardInset > 0 && { paddingBottom: renameKeyboardInset },
+          ]}
         >
           <Pressable style={renameStyles.backdrop} onPress={handleRenameCancel} />
           <View style={renameStyles.sheet}>
-            <Text style={renameStyles.sheetTitle}>폴더명 수정</Text>
-            <View style={renameStyles.inputRow}>
-              <TextInput
-                ref={renameInputRef}
-                style={renameStyles.input}
-                value={renameState.value}
-                onChangeText={(v) => setRenameState((s) => ({ ...s, value: v }))}
-                placeholder="폴더 이름 입력"
-                placeholderTextColor={Colors.brand.textHint}
-                returnKeyType="done"
-                onSubmitEditing={handleRenameConfirm}
-                maxLength={50}
-                autoFocus
-              />
-              {renameState.value.length > 0 && (
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={renameStyles.sheetContent}
+            >
+              <Text style={renameStyles.sheetTitle}>폴더명 수정</Text>
+              <View style={renameStyles.inputRow}>
+                <TextInput
+                  ref={renameInputRef}
+                  style={renameStyles.input}
+                  value={renameState.value}
+                  onChangeText={(v) => setRenameState((s) => ({ ...s, value: v }))}
+                  placeholder="폴더 이름 입력"
+                  placeholderTextColor={Colors.brand.textHint}
+                  returnKeyType="done"
+                  onSubmitEditing={Keyboard.dismiss}
+                  maxLength={50}
+                  autoFocus
+                />
+                {renameState.value.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => setRenameState((s) => ({ ...s, value: '' }))}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={renameStyles.clearButton}
+                  >
+                    <Text style={renameStyles.clearButtonText}>−</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <View style={renameStyles.actions}>
                 <TouchableOpacity
-                  onPress={() => setRenameState((s) => ({ ...s, value: '' }))}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  style={renameStyles.clearButton}
+                  style={renameStyles.cancelBtn}
+                  onPress={handleRenameCancel}
                 >
-                  <Text style={renameStyles.clearButtonText}>−</Text>
+                  <Text style={renameStyles.cancelText}>취소</Text>
                 </TouchableOpacity>
-              )}
-            </View>
-            <View style={renameStyles.actions}>
-              <TouchableOpacity style={renameStyles.cancelBtn} onPress={handleRenameCancel}>
-                <Text style={renameStyles.cancelText}>취소</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[renameStyles.confirmBtn, renameSubmitDisabled && renameStyles.confirmBtnDisabled]}
-                onPress={handleRenameConfirm}
-                disabled={renameSubmitDisabled}
-              >
-                <Text style={[renameStyles.confirmText, renameSubmitDisabled && renameStyles.confirmTextDisabled]}>
-                  저장
-                </Text>
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity
+                  style={[renameStyles.confirmBtn, renameSubmitDisabled && renameStyles.confirmBtnDisabled]}
+                  onPress={handleRenameConfirm}
+                  disabled={renameSubmitDisabled}
+                >
+                  <Text style={[renameStyles.confirmText, renameSubmitDisabled && renameStyles.confirmTextDisabled]}>
+                    저장
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -373,9 +403,14 @@ const renameStyles = StyleSheet.create({
     backgroundColor: Colors.brand.overlayBackdrop,
   },
   sheet: {
+    width: '100%',
+    maxHeight: '80%',
     backgroundColor: Colors.brand.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    overflow: 'hidden',
+  },
+  sheetContent: {
     padding: 24,
     paddingBottom: 40,
     gap: 16,

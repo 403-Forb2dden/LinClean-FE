@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
-  KeyboardAvoidingView,
+  Keyboard,
   Modal,
-  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -24,11 +24,13 @@ interface TitleEditModalProps {
 export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditModalProps) {
   const [titleValue, setTitleValue] = useState('');
   const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
+  const [keyboardInset, setKeyboardInset] = useState(0);
   const titleInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     if (!editingLink) {
       setTitleValue('');
+      setKeyboardInset(0);
       return;
     }
 
@@ -36,6 +38,24 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
     const focusTimer = setTimeout(() => titleInputRef.current?.focus(), 100);
 
     return () => clearTimeout(focusTimer);
+  }, [editingLink]);
+
+  useEffect(() => {
+    if (!editingLink) {
+      return;
+    }
+
+    const showSubscription = Keyboard.addListener('keyboardDidShow', (event) => {
+      setKeyboardInset(event.endCoordinates.height);
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardInset(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
   }, [editingLink]);
 
   const handleClose = useCallback(() => {
@@ -82,57 +102,65 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
       animationType="fade"
       onRequestClose={handleClose}
     >
-      <KeyboardAvoidingView
-        style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      <View
+        style={[
+          styles.overlay,
+          keyboardInset > 0 && { paddingBottom: keyboardInset },
+        ]}
       >
         <Pressable style={styles.backdrop} onPress={handleClose} />
         <View style={styles.sheet}>
-          <Text style={styles.sheetTitle}>제목 수정</Text>
-          <View style={styles.inputRow}>
-            <TextInput
-              ref={titleInputRef}
-              style={styles.input}
-              value={titleValue}
-              onChangeText={setTitleValue}
-              placeholder="URL 제목 입력"
-              placeholderTextColor={Colors.brand.textHint}
-              returnKeyType="done"
-              onSubmitEditing={handleConfirm}
-              maxLength={500}
-              editable={!isUpdatingTitle}
-              autoFocus
-            />
-            {titleValue.length > 0 && !isUpdatingTitle && (
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.sheetContent}
+          >
+            <Text style={styles.sheetTitle}>제목 수정</Text>
+            <View style={styles.inputRow}>
+              <TextInput
+                ref={titleInputRef}
+                style={styles.input}
+                value={titleValue}
+                onChangeText={setTitleValue}
+                placeholder="URL 제목 입력"
+                placeholderTextColor={Colors.brand.textHint}
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+                maxLength={500}
+                editable={!isUpdatingTitle}
+                autoFocus
+              />
+              {titleValue.length > 0 && !isUpdatingTitle && (
+                <TouchableOpacity
+                  onPress={() => setTitleValue('')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={styles.clearButton}
+                >
+                  <Text style={styles.clearButtonText}>−</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <View style={styles.actions}>
               <TouchableOpacity
-                onPress={() => setTitleValue('')}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={styles.clearButton}
+                style={styles.cancelBtn}
+                onPress={handleClose}
+                disabled={isUpdatingTitle}
               >
-                <Text style={styles.clearButtonText}>−</Text>
+                <Text style={styles.cancelText}>취소</Text>
               </TouchableOpacity>
-            )}
-          </View>
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={styles.cancelBtn}
-              onPress={handleClose}
-              disabled={isUpdatingTitle}
-            >
-              <Text style={styles.cancelText}>취소</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.confirmBtn, titleSubmitDisabled && styles.confirmBtnDisabled]}
-              onPress={handleConfirm}
-              disabled={titleSubmitDisabled}
-            >
-              <Text style={[styles.confirmText, titleSubmitDisabled && styles.confirmTextDisabled]}>
-                {isUpdatingTitle ? '저장 중...' : '저장'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                style={[styles.confirmBtn, titleSubmitDisabled && styles.confirmBtnDisabled]}
+                onPress={handleConfirm}
+                disabled={titleSubmitDisabled}
+              >
+                <Text style={[styles.confirmText, titleSubmitDisabled && styles.confirmTextDisabled]}>
+                  {isUpdatingTitle ? '저장 중...' : '저장'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
@@ -147,9 +175,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.brand.overlayBackdrop,
   },
   sheet: {
+    width: '100%',
+    maxHeight: '80%',
     backgroundColor: Colors.brand.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    overflow: 'hidden',
+  },
+  sheetContent: {
     padding: 24,
     paddingBottom: 40,
     gap: 16,
