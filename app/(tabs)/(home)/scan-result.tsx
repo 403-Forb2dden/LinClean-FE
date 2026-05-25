@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { ResultStatusIcon } from '@/components/ui/result-status-icon';
 import { ScanResultReason } from '@/components/ui/scan-result-reason';
 import { getMockScanResultReason } from '@/constants/scan-result-reasons';
@@ -16,12 +17,17 @@ import {
   getRouteParam,
 } from '@/utils/analysis-result-display';
 
+const COMPACT_RESULT_HEIGHT = 760;
+const VERY_COMPACT_RESULT_HEIGHT = 700;
+
 export default function ScanResultScreen() {
   const {
     analysisId: analysisIdParam,
     url: urlParam,
   } = useLocalSearchParams<{ analysisId?: string | string[]; url?: string | string[] }>();
   const { addLink } = useSavedLinks();
+  const { height: windowHeight } = useWindowDimensions();
+  const tabBarHeight = useBottomTabBarHeight();
   const analysisId = getRouteParam(analysisIdParam);
   const url = getRouteParam(urlParam);
   const { analysis, isLoading, errorMessage } = useAnalysisResult(analysisId);
@@ -39,6 +45,8 @@ export default function ScanResultScreen() {
     !isLoading &&
     !shouldRedirectToVerdict &&
     !isSaving;
+  const isCompactResult = windowHeight <= COMPACT_RESULT_HEIGHT;
+  const isVeryCompactResult = windowHeight <= VERY_COMPACT_RESULT_HEIGHT;
 
   useEffect(() => {
     if (!analysis?.verdict || analysis.verdict === 'safe') {
@@ -130,24 +138,30 @@ export default function ScanResultScreen() {
       />
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.container}
+        contentContainerStyle={[
+          styles.container,
+          isCompactResult && styles.containerCompact,
+          { paddingBottom: tabBarHeight + (isCompactResult ? 16 : 24) },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* 안전 배지 영역 */}
-        <View style={styles.badgeArea}>
-          <ResultStatusIcon variant="safe" label="안전" size="large" />
+        <View style={[styles.badgeArea, isCompactResult && styles.badgeAreaCompact]}>
+          <ResultStatusIcon variant="safe" label="안전" size="large" compact={isCompactResult} />
         </View>
 
         {/* 결과 텍스트 */}
-        <Text style={styles.resultTitle}>안전한 웹사이트입니다.</Text>
+        <Text style={[styles.resultTitle, isCompactResult && styles.resultTitleCompact]}>
+          안전한 웹사이트입니다.
+        </Text>
 
         {isLoading && <Text style={styles.statusText}>분석 결과를 불러오는 중입니다.</Text>}
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
-        <ScanResultReason reason={reason} style={styles.reasonCard} />
+        <ScanResultReason reason={reason} style={[styles.reasonCard, isCompactResult && styles.reasonCardCompact]} />
 
         {/* 검사 대상 카드 */}
-        <View style={styles.card}>
+        <View style={[styles.card, isCompactResult && styles.cardCompact]}>
           <Text style={styles.cardLabel}>검사 대상</Text>
           <Text style={styles.cardUrl} numberOfLines={1} ellipsizeMode="tail">
             {displayUrl}
@@ -155,9 +169,13 @@ export default function ScanResultScreen() {
         </View>
 
         {/* 버튼 영역 */}
-        <View style={styles.buttonArea}>
+        <View style={[styles.buttonArea, isCompactResult && styles.buttonAreaCompact]}>
           <TouchableOpacity
-            style={[styles.primaryButton, !canSave && styles.disabledButton]}
+            style={[
+              styles.primaryButton,
+              isVeryCompactResult && styles.buttonVeryCompact,
+              !canSave && styles.disabledButton,
+            ]}
             onPress={() => setSaveModalVisible(true)}
             activeOpacity={0.8}
             disabled={!canSave}
@@ -165,7 +183,11 @@ export default function ScanResultScreen() {
             <Text style={styles.primaryButtonText}>저장</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.secondaryButton} onPress={handleOpenUrl} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={[styles.secondaryButton, isVeryCompactResult && styles.buttonVeryCompact]}
+            onPress={handleOpenUrl}
+            activeOpacity={0.8}
+          >
             <Text style={styles.secondaryButtonText}>즉시 URL 접속</Text>
           </TouchableOpacity>
         </View>
@@ -198,11 +220,17 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     alignItems: 'center',
   },
+  containerCompact: {
+    paddingTop: 0,
+  },
 
   // 배지 영역
   badgeArea: {
     alignItems: 'center',
     marginBottom: 20,
+  },
+  badgeAreaCompact: {
+    marginBottom: 12,
   },
 
   // 결과 텍스트
@@ -212,8 +240,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 10,
   },
+  resultTitleCompact: {
+    ...Typography.pageTitle,
+    marginBottom: 8,
+  },
   reasonCard: {
     marginBottom: 24,
+  },
+  reasonCardCompact: {
+    marginBottom: 16,
   },
   statusText: {
     ...Typography.caption,
@@ -243,6 +278,10 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 28,
   },
+  cardCompact: {
+    padding: 14,
+    marginBottom: 20,
+  },
   cardLabel: {
     ...Typography.caption,
     color: Colors.brand.textHint,
@@ -257,6 +296,9 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: 12,
   },
+  buttonAreaCompact: {
+    gap: 10,
+  },
   primaryButton: {
     width: '100%',
     height: 56,
@@ -264,6 +306,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.brand.primary,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  buttonVeryCompact: {
+    height: 52,
+    borderRadius: 26,
   },
   primaryButtonText: {
     ...Typography.section,

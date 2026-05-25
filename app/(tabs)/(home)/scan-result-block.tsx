@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { ResultStatusIcon } from '@/components/ui/result-status-icon';
 import { ScanResultReason } from '@/components/ui/scan-result-reason';
 import { getMockScanResultReason } from '@/constants/scan-result-reasons';
@@ -13,11 +14,16 @@ import {
   getRouteParam,
 } from '@/utils/analysis-result-display';
 
+const COMPACT_RESULT_HEIGHT = 760;
+const VERY_COMPACT_RESULT_HEIGHT = 700;
+
 export default function ScanResultBlockScreen() {
   const {
     analysisId: analysisIdParam,
     url: urlParam,
   } = useLocalSearchParams<{ analysisId?: string | string[]; url?: string | string[] }>();
+  const { height: windowHeight } = useWindowDimensions();
+  const tabBarHeight = useBottomTabBarHeight();
   const analysisId = getRouteParam(analysisIdParam);
   const url = getRouteParam(urlParam);
   const { analysis, isLoading, errorMessage } = useAnalysisResult(analysisId);
@@ -25,6 +31,8 @@ export default function ScanResultBlockScreen() {
   const reason = getAnalysisReasonText(analysis, getMockScanResultReason('danger'));
   const shouldRedirectToVerdict = Boolean(analysis?.verdict && analysis.verdict !== 'danger');
   const isVerifyingAnalysis = Boolean(analysisId) && !errorMessage && (!analysis?.verdict || isLoading);
+  const isCompactResult = windowHeight <= COMPACT_RESULT_HEIGHT;
+  const isVeryCompactResult = windowHeight <= VERY_COMPACT_RESULT_HEIGHT;
 
   useEffect(() => {
     if (!analysis?.verdict || analysis.verdict === 'danger') {
@@ -77,24 +85,30 @@ export default function ScanResultBlockScreen() {
       />
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.container}
+        contentContainerStyle={[
+          styles.container,
+          isCompactResult && styles.containerCompact,
+          { paddingBottom: tabBarHeight + (isCompactResult ? 16 : 24) },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* 차단 배지 */}
-        <View style={styles.badgeArea}>
-          <ResultStatusIcon variant="block" label="차단" size="large" />
+        <View style={[styles.badgeArea, isCompactResult && styles.badgeAreaCompact]}>
+          <ResultStatusIcon variant="block" label="차단" size="large" compact={isCompactResult} />
         </View>
 
         {/* 결과 텍스트 */}
-        <Text style={styles.resultTitle}>차단된 위험 링크입니다.</Text>
+        <Text style={[styles.resultTitle, isCompactResult && styles.resultTitleCompact]}>
+          차단된 위험 링크입니다.
+        </Text>
 
         {isLoading && <Text style={styles.statusText}>분석 결과를 불러오는 중입니다.</Text>}
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
-        <ScanResultReason reason={reason} style={styles.reasonCard} />
+        <ScanResultReason reason={reason} style={[styles.reasonCard, isCompactResult && styles.reasonCardCompact]} />
 
         {/* 검사 대상 카드 */}
-        <View style={styles.card}>
+        <View style={[styles.card, isCompactResult && styles.cardCompact]}>
           <Text style={styles.cardLabel}>검사 대상</Text>
           <Text style={styles.cardUrl} numberOfLines={1} ellipsizeMode="tail">
             {displayUrl}
@@ -104,7 +118,7 @@ export default function ScanResultBlockScreen() {
         {/* 확인 버튼 */}
         <View style={styles.buttonArea}>
           <TouchableOpacity
-            style={styles.confirmButton}
+            style={[styles.confirmButton, isVeryCompactResult && styles.buttonVeryCompact]}
             onPress={() => router.dismissAll()}
             activeOpacity={0.8}
           >
@@ -128,10 +142,16 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     alignItems: 'center',
   },
+  containerCompact: {
+    paddingTop: 0,
+  },
 
   badgeArea: {
     alignItems: 'center',
     marginBottom: 20,
+  },
+  badgeAreaCompact: {
+    marginBottom: 12,
   },
 
   resultTitle: {
@@ -140,8 +160,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 10,
   },
+  resultTitleCompact: {
+    ...Typography.pageTitle,
+    marginBottom: 8,
+  },
   reasonCard: {
     marginBottom: 24,
+  },
+  reasonCardCompact: {
+    marginBottom: 16,
   },
   statusText: {
     ...Typography.caption,
@@ -170,6 +197,10 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 28,
   },
+  cardCompact: {
+    padding: 14,
+    marginBottom: 20,
+  },
   cardLabel: {
     ...Typography.caption,
     color: Colors.brand.textHint,
@@ -189,6 +220,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.brand.textWarning,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  buttonVeryCompact: {
+    height: 52,
+    borderRadius: 26,
   },
   confirmButtonText: {
     ...Typography.section,

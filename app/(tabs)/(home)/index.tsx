@@ -4,8 +4,10 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { AppIcon } from '@/components/ui/app-icon';
@@ -20,10 +22,14 @@ import { useFolders } from '@/context/folders-context';
 import { getSavedLinkErrorMessage, useSavedLinks, type SavedLink } from '@/context/saved-links-context';
 import type { AnchorPosition } from '@/components/ui/folder-card';
 
+const COMPACT_WIDTH = 380;
+
 export default function HomeScreen() {
   const { savedLinkToast: savedLinkToastParam } = useLocalSearchParams<{
     savedLinkToast?: string | string[];
   }>();
+  const { width: windowWidth } = useWindowDimensions();
+  const tabBarHeight = useBottomTabBarHeight();
   const { links, toggleBookmark, deleteLink, updateTitle } = useSavedLinks();
   const { refreshFolders } = useFolders();
   const [menuState, setMenuState] = useState<{ visible: boolean; anchor?: AnchorPosition; linkId?: number }>({ visible: false });
@@ -33,6 +39,7 @@ export default function HomeScreen() {
   const [titleToastVisible, setTitleToastVisible] = useState(false);
   const lastToastParamRef = useRef<string | undefined>(undefined);
   const savedLinkToast = typeof savedLinkToastParam === 'string' ? savedLinkToastParam : undefined;
+  const isCompactWidth = windowWidth < COMPACT_WIDTH;
 
   // 최근 저장한 링크 — createdAt 내림차순 상위 3개
   const recentLinks = links.slice(0, 3);
@@ -104,7 +111,11 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          isCompactWidth && styles.contentCompact,
+          { paddingBottom: tabBarHeight + 24 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* 상단 헤더 */}
@@ -115,23 +126,23 @@ export default function HomeScreen() {
               size={30}
               color={Colors.brand.primary}
             />
-            <Text style={styles.brandText}>LinClean</Text>
+            <Text style={[styles.brandText, isCompactWidth && styles.brandTextCompact]}>LinClean</Text>
           </View>
           <AppIcon name="settings" size={28} label="설정" onPress={() => router.push('/(tabs)/(home)/settings')} />
         </View>
 
         {/* 서브타이틀 */}
-        <Text style={styles.subtitle}>오늘도 안전하게 정리해요</Text>
+        <Text style={[styles.subtitle, isCompactWidth && styles.subtitleCompact]}>오늘도 안전하게 정리해요</Text>
 
         {/* 보안 등급별 링크 현황 */}
         <View style={styles.section}>
-          <SectionHeader label="보안 등급별 링크 현황" />
-          <View style={styles.statPlaceholder}>
-            <View style={styles.statGrid}>
-              <View style={styles.statItem} />
-              <View style={styles.statItem} />
-              <View style={styles.statItem} />
-              <View style={styles.statItem} />
+          <SectionHeader label="보안 등급별 링크 현황" compact={isCompactWidth} />
+          <View style={[styles.statPlaceholder, isCompactWidth && styles.statPlaceholderCompact]}>
+            <View style={[styles.statGrid, isCompactWidth && styles.statGridCompact]}>
+              <View style={[styles.statItem, isCompactWidth && styles.statItemCompact]} />
+              <View style={[styles.statItem, isCompactWidth && styles.statItemCompact]} />
+              <View style={[styles.statItem, isCompactWidth && styles.statItemCompact]} />
+              <View style={[styles.statItem, isCompactWidth && styles.statItemCompact]} />
             </View>
           </View>
         </View>
@@ -141,6 +152,7 @@ export default function HomeScreen() {
           <SectionHeader
             label="최근 저장한 링크"
             onViewAll={() => router.push('/saved-links')}
+            compact={isCompactWidth}
           />
           <View style={styles.linkList}>
             {recentLinks.map((link) => (
@@ -222,6 +234,10 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     gap: 24,
   },
+  contentCompact: {
+    paddingHorizontal: 20,
+    gap: 18,
+  },
 
   header: {
     flexDirection: 'row',
@@ -238,11 +254,17 @@ const styles = StyleSheet.create({
     ...Typography.displayMedium,
     color: Colors.brand.primary,
   },
+  brandTextCompact: {
+    ...Typography.pageTitle,
+  },
 
   subtitle: {
     ...Typography.caption,
     color: Colors.brand.textSecondary,
     marginTop: -16,
+  },
+  subtitleCompact: {
+    marginTop: -10,
   },
 
   section: {
@@ -256,10 +278,16 @@ const styles = StyleSheet.create({
     borderColor: Colors.brand.line,
     padding: 16,
   },
+  statPlaceholderCompact: {
+    padding: 14,
+  },
   statGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+  },
+  statGridCompact: {
+    gap: 10,
   },
   statItem: {
     flex: 1,
@@ -269,6 +297,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: Colors.brand.line,
     borderStyle: 'dashed',
+  },
+  statItemCompact: {
+    height: 48,
   },
 
   linkList: {

@@ -4,15 +4,22 @@ import { Colors, Typography } from '@/constants/theme';
 
 interface SectionHeaderProps {
   label: string;
+  compact?: boolean;
   onViewAll?: () => void;
   viewAllLabel?: string;
   rightSlot?: ReactNode;
 }
 
-export function SectionHeader({ label, onViewAll, viewAllLabel = '전체보기', rightSlot }: SectionHeaderProps) {
+export function SectionHeader({
+  label,
+  compact = false,
+  onViewAll,
+  viewAllLabel = '전체보기',
+  rightSlot,
+}: SectionHeaderProps) {
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, compact && styles.labelCompact]}>{label}</Text>
       {rightSlot ?? (onViewAll && (
         <TouchableOpacity onPress={onViewAll} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Text style={styles.viewAll}>{viewAllLabel}</Text>
@@ -31,6 +38,9 @@ const styles = StyleSheet.create({
   label: {
     ...Typography.sectionTitle,
     color: Colors.brand.text,
+  },
+  labelCompact: {
+    ...Typography.section,
   },
   viewAll: {
     ...Typography.caption,
