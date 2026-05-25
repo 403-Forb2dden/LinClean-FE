@@ -25,19 +25,21 @@ interface SelectableCardProps {
 
 function SelectableCard({ link, selected, onToggle }: SelectableCardProps) {
   return (
-    <View style={styles.cardRow}>
-      <CardLink
-        verdict={link.verdict}
-        title={link.title}
-        originalUrl={link.originalUrl}
-        finalUrl={link.finalUrl}
-        bookmarked={link.isBookmarked}
-        icon={false}
-        onPress={() => onToggle(link.id)}
-      />
-      {selected && (
-        <View style={styles.selectedOverlay} pointerEvents="none" />
-      )}
+    <View style={styles.selectableCard}>
+      <View style={styles.cardLayer}>
+        <CardLink
+          verdict={link.verdict}
+          title={link.title}
+          originalUrl={link.originalUrl}
+          finalUrl={link.finalUrl}
+          bookmarked={link.isBookmarked}
+          icon={false}
+          onPress={() => onToggle(link.id)}
+        />
+        {selected && (
+          <View style={styles.selectedOverlay} pointerEvents="none" />
+        )}
+      </View>
       <View style={styles.checkOverlay} pointerEvents="none">
         <SelectionCircle selected={selected} />
       </View>
@@ -216,7 +218,10 @@ const styles = StyleSheet.create({
     height: 8,
   },
 
-  cardRow: {
+  selectableCard: {
+    position: 'relative',
+  },
+  cardLayer: {
     position: 'relative',
     borderRadius: 22,
     overflow: 'hidden',
