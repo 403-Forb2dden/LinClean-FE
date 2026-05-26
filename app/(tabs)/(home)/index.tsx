@@ -15,10 +15,33 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { SectionHeader } from '@/components/ui/section-header';
 import { TitleEditModal } from '@/components/ui/title-edit-modal';
 import { Toast } from '@/components/ui/toast';
+import {
+  fetchVerdictStatistics,
+  type AnalysisVerdict,
+  type VerdictStatisticsResponse,
+} from '@/api/analyses';
 import { Colors, Typography } from '@/constants/theme';
 import { useFolders } from '@/context/folders-context';
 import { getSavedLinkErrorMessage, useSavedLinks, type SavedLink } from '@/context/saved-links-context';
 import type { AnchorPosition } from '@/components/ui/folder-card';
+
+type SecurityStatusItem = {
+  verdict: AnalysisVerdict;
+  label: string;
+  summary: string;
+};
+
+const SECURITY_STATUS_ITEMS: SecurityStatusItem[] = [
+  { verdict: 'safe', label: '안전', summary: '문제 없음' },
+  { verdict: 'caution', label: '주의', summary: '확인 필요' },
+  { verdict: 'danger', label: '위험', summary: '접근 주의' },
+];
+
+const EMPTY_STATISTICS: VerdictStatisticsResponse = {
+  safe: 0,
+  caution: 0,
+  danger: 0,
+};
 
 export default function HomeScreen() {
   const { savedLinkToast: savedLinkToastParam } = useLocalSearchParams<{
@@ -31,6 +54,9 @@ export default function HomeScreen() {
   const [saveToastVisible, setSaveToastVisible] = useState(false);
   const [deleteToastVisible, setDeleteToastVisible] = useState(false);
   const [titleToastVisible, setTitleToastVisible] = useState(false);
+  const [statistics, setStatistics] = useState<VerdictStatisticsResponse>(EMPTY_STATISTICS);
+  const [isStatisticsLoading, setIsStatisticsLoading] = useState(true);
+  const [statisticsErrorMessage, setStatisticsErrorMessage] = useState('');
   const lastToastParamRef = useRef<string | undefined>(undefined);
   const savedLinkToast = typeof savedLinkToastParam === 'string' ? savedLinkToastParam : undefined;
 
@@ -45,6 +71,37 @@ export default function HomeScreen() {
     lastToastParamRef.current = savedLinkToast;
     setSaveToastVisible(true);
   }, [savedLinkToast]);
+
+  useEffect(() => {
+    const abortController = new AbortController();
+
+    async function loadStatistics() {
+      setIsStatisticsLoading(true);
+      setStatisticsErrorMessage('');
+
+      try {
+        const response = await fetchVerdictStatistics({ signal: abortController.signal });
+        setStatistics(response);
+      } catch {
+        if (abortController.signal.aborted) {
+          return;
+        }
+
+        setStatistics(EMPTY_STATISTICS);
+        setStatisticsErrorMessage('불러오지 못했어요');
+      } finally {
+        if (!abortController.signal.aborted) {
+          setIsStatisticsLoading(false);
+        }
+      }
+    }
+
+    void loadStatistics();
+
+    return () => {
+      abortController.abort();
+    };
+  }, []);
 
   const handleMore = (id: number, anchor: AnchorPosition) => {
     setMenuState({ visible: true, anchor, linkId: id });
@@ -125,14 +182,44 @@ export default function HomeScreen() {
 
         {/* 보안 등급별 링크 현황 */}
         <View style={styles.section}>
-          <SectionHeader label="보안 등급별 링크 현황" />
-          <View style={styles.statPlaceholder}>
-            <View style={styles.statGrid}>
-              <View style={styles.statItem} />
-              <View style={styles.statItem} />
-              <View style={styles.statItem} />
-              <View style={styles.statItem} />
-            </View>
+          <SectionHeader
+            label="보안 등급별 링크 현황"
+            rightSlot={
+              statisticsErrorMessage ? (
+                <Text style={styles.sectionStatus}>{statisticsErrorMessage}</Text>
+              ) : undefined
+            }
+          />
+          <View style={styles.statCardGroup}>
+            {SECURITY_STATUS_ITEMS.map((item) => {
+              const colors = Colors.brand.verdict[item.verdict];
+              const countLabel = isStatisticsLoading ? '-' : String(statistics[item.verdict]);
+
+              return (
+                <View
+                  key={item.verdict}
+                  style={[
+                    styles.statCard,
+                    { backgroundColor: colors.background, borderColor: colors.accent },
+                  ]}
+                >
+                  <View style={styles.statCardHeader}>
+                    <View style={[styles.statIndicator, { backgroundColor: colors.accent }]} />
+                    <Text style={[styles.statLabel, { color: colors.text }]}>{item.label}</Text>
+                  </View>
+                  <Text
+                    style={[styles.statCount, { color: colors.text }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                  >
+                    {countLabel}
+                  </Text>
+                  <Text style={[styles.statSummary, { color: colors.text }]} numberOfLines={1}>
+                    {item.summary}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
         </View>
 
@@ -249,26 +336,47 @@ const styles = StyleSheet.create({
     gap: 12,
   },
 
-  statPlaceholder: {
+  sectionStatus: {
+    ...Typography.bold12,
+    color: Colors.brand.textHint,
+  },
+
+  statCardGroup: {
     backgroundColor: Colors.brand.surface,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.brand.line,
     padding: 16,
-  },
-  statGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 12,
   },
-  statItem: {
+  statCard: {
     flex: 1,
-    minWidth: '45%',
-    height: 56,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.brand.line,
-    borderStyle: 'dashed',
+    minHeight: 112,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+    justifyContent: 'space-between',
+  },
+  statCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statLabel: {
+    ...Typography.bold12,
+  },
+  statCount: {
+    ...Typography.title,
+    lineHeight: 30,
+  },
+  statSummary: {
+    ...Typography.regular12,
   },
 
   linkList: {
