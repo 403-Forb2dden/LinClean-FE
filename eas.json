@@ -16,9 +16,7 @@
     },
     "preview-device": {
       "distribution": "internal",
-      "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "http://192.168.0.12:8080"
-      }
+      "environment": "preview"
     },
     "production": {
       "autoIncrement": true
