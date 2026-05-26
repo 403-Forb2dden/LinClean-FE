@@ -132,7 +132,6 @@ export default function FolderScreen() {
     if (menuState.folderId == null) return;
     const current = folders.find((f) => f.id === menuState.folderId)?.name ?? '';
     setRenameState({ visible: true, folderId: menuState.folderId, value: current, currentName: current });
-    setTimeout(() => renameInputRef.current?.focus(), 100);
   };
 
   const handleRenameConfirm = async () => {
