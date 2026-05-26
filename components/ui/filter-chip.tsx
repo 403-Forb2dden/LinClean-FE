@@ -1,7 +1,14 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Typography } from '@/constants/theme';
+
+const EXPANDED_LABEL_THRESHOLD = 6;
+const MAX_VISIBLE_LABEL_CHARS = 15;
+const LABEL_MAX_WIDTH = Typography.caption.fontSize * MAX_VISIBLE_LABEL_CHARS;
+const DROPDOWN_MIN_WIDTH = 120;
+const DROPDOWN_HORIZONTAL_PADDING = 32;
+const DROPDOWN_MAX_CONTENT_WIDTH = LABEL_MAX_WIDTH + DROPDOWN_HORIZONTAL_PADDING;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -29,11 +36,12 @@ interface DropdownProps {
   items: FilterChipItem[];
   selectedValue: string;
   onSelect: (value: string) => void;
+  width: number;
 }
 
-function Dropdown({ items, selectedValue, onSelect }: DropdownProps) {
+function Dropdown({ items, selectedValue, onSelect, width }: DropdownProps) {
   return (
-    <View style={dropdownStyles.container}>
+    <View style={[dropdownStyles.container, { width }]}>
       {items.map((item, index) => {
         const isSelected = item.value === selectedValue;
         const isLast = index === items.length - 1;
@@ -55,6 +63,8 @@ function Dropdown({ items, selectedValue, onSelect }: DropdownProps) {
                   dropdownStyles.itemLabel,
                   { color: isSelected ? Colors.brand.text : Colors.brand.textSecondary },
                 ]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
               >
                 {item.label}
               </Text>
@@ -75,7 +85,7 @@ const dropdownStyles = StyleSheet.create({
     marginTop: 4,
     backgroundColor: Colors.brand.surface,
     borderRadius: 10,
-    minWidth: 120,
+    minWidth: DROPDOWN_MIN_WIDTH,
     zIndex: 100,
     shadowColor: Colors.brand.text,
     shadowOffset: { width: 0, height: 2 },
@@ -117,9 +127,15 @@ export function FilterChip({
   onPress,
 }: FilterChipProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const { width } = useWindowDimensions();
 
   const currentItem = items.find((i) => i.value === selectedValue);
   const displayLabel = label ?? currentItem?.label ?? '';
+  const hasLongDropdownItem = items.some((item) => item.label.length > EXPANDED_LABEL_THRESHOLD);
+  const dropdownWidth = Math.min(
+    hasLongDropdownItem ? DROPDOWN_MAX_CONTENT_WIDTH : DROPDOWN_MIN_WIDTH,
+    Math.max(DROPDOWN_MIN_WIDTH, width - 40),
+  );
 
   const isActive = variant === 'active';
   const labelColor = disabled
@@ -151,7 +167,13 @@ export function FilterChip({
         accessibilityRole="button"
         accessibilityState={{ disabled, expanded: isOpen }}
       >
-        <Text style={[chipStyles.label, { color: labelColor }]}>{displayLabel}</Text>
+        <Text
+          style={[chipStyles.label, { color: labelColor }]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          {displayLabel}
+        </Text>
         {icon && (
           <View style={isOpen ? chipStyles.iconRotated : undefined}>
             <IconSymbol
@@ -168,6 +190,7 @@ export function FilterChip({
           items={items}
           selectedValue={selectedValue ?? ''}
           onSelect={handleSelect}
+          width={dropdownWidth}
         />
       )}
     </View>
@@ -178,12 +201,17 @@ const chipStyles = StyleSheet.create({
   wrapper: {
     position: 'relative',
     alignSelf: 'flex-start',
+    flexShrink: 1,
+    minWidth: 0,
+    maxWidth: '100%',
     zIndex: 10,
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 1,
     gap: 4,
+    maxWidth: '100%',
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 100,
@@ -200,6 +228,8 @@ const chipStyles = StyleSheet.create({
   },
   label: {
     ...Typography.caption,
+    flexShrink: 1,
+    minWidth: 0,
   },
   iconRotated: {
     transform: [{ rotate: '180deg' }],
