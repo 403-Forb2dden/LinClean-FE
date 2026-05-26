@@ -31,11 +31,19 @@ type SecurityStatusItem = {
   summary: string;
 };
 
+type StatisticsViewStatus = 'loading' | 'error' | 'empty' | 'ready';
+
 const SECURITY_STATUS_ITEMS: SecurityStatusItem[] = [
   { verdict: 'safe', label: '안전', summary: '문제 없음' },
   { verdict: 'caution', label: '주의', summary: '확인 필요' },
   { verdict: 'danger', label: '위험', summary: '접근 주의' },
 ];
+
+const STATISTICS_STATUS_LABELS: Record<Exclude<StatisticsViewStatus, 'ready'>, string> = {
+  loading: '조회 중',
+  error: '불러오지 못했어요',
+  empty: '기록 없음',
+};
 
 const EMPTY_STATISTICS: VerdictStatisticsResponse = {
   safe: 0,
@@ -59,6 +67,14 @@ export default function HomeScreen() {
   const [statisticsErrorMessage, setStatisticsErrorMessage] = useState('');
   const lastToastParamRef = useRef<string | undefined>(undefined);
   const savedLinkToast = typeof savedLinkToastParam === 'string' ? savedLinkToastParam : undefined;
+  const statisticsStatus = getStatisticsViewStatus(
+    statistics,
+    isStatisticsLoading,
+    statisticsErrorMessage,
+  );
+  const statisticsStatusLabel = statisticsStatus === 'ready'
+    ? ''
+    : STATISTICS_STATUS_LABELS[statisticsStatus];
 
   // 최근 저장한 링크 — createdAt 내림차순 상위 3개
   const recentLinks = links.slice(0, 3);
@@ -185,15 +201,20 @@ export default function HomeScreen() {
           <SectionHeader
             label="보안 등급별 링크 현황"
             rightSlot={
-              statisticsErrorMessage ? (
-                <Text style={styles.sectionStatus}>{statisticsErrorMessage}</Text>
+              statisticsStatusLabel ? (
+                <Text style={styles.sectionStatus}>{statisticsStatusLabel}</Text>
               ) : undefined
             }
           />
           <View style={styles.statCardGroup}>
             {SECURITY_STATUS_ITEMS.map((item) => {
               const colors = Colors.brand.verdict[item.verdict];
-              const countLabel = isStatisticsLoading ? '-' : String(statistics[item.verdict]);
+              const countLabel = getStatisticsCountLabel(
+                item.verdict,
+                statistics,
+                statisticsStatus,
+              );
+              const summary = getStatisticsSummary(item, statisticsStatus);
 
               return (
                 <View
@@ -215,7 +236,7 @@ export default function HomeScreen() {
                     {countLabel}
                   </Text>
                   <Text style={[styles.statSummary, { color: colors.text }]} numberOfLines={1}>
-                    {item.summary}
+                    {summary}
                   </Text>
                 </View>
               );
@@ -383,3 +404,49 @@ const styles = StyleSheet.create({
     gap: 12,
   },
 });
+
+function getStatisticsViewStatus(
+  statistics: VerdictStatisticsResponse,
+  isLoading: boolean,
+  errorMessage: string,
+): StatisticsViewStatus {
+  if (isLoading) {
+    return 'loading';
+  }
+
+  if (errorMessage) {
+    return 'error';
+  }
+
+  if (SECURITY_STATUS_ITEMS.every((item) => statistics[item.verdict] === 0)) {
+    return 'empty';
+  }
+
+  return 'ready';
+}
+
+function getStatisticsCountLabel(
+  verdict: AnalysisVerdict,
+  statistics: VerdictStatisticsResponse,
+  status: StatisticsViewStatus,
+) {
+  return status === 'loading' || status === 'error'
+    ? '-'
+    : String(statistics[verdict]);
+}
+
+function getStatisticsSummary(item: SecurityStatusItem, status: StatisticsViewStatus) {
+  if (status === 'loading') {
+    return '집계 중';
+  }
+
+  if (status === 'error') {
+    return '확인 불가';
+  }
+
+  if (status === 'empty') {
+    return '기록 없음';
+  }
+
+  return item.summary;
+}
