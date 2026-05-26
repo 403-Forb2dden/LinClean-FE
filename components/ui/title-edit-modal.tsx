@@ -1,20 +1,46 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  KeyboardAvoidingView,
+  Keyboard,
+  LayoutAnimation,
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  type KeyboardEvent,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors, Typography } from '@/constants/theme';
 import { getSavedLinkErrorMessage, type SavedLink } from '@/context/saved-links-context';
 import { showAlert } from '@/utils/guarded-alert';
 import { useGuardedPress } from '@/utils/press-guard';
+
+const MODAL_BOTTOM_GAP = 16;
+const KEYBOARD_TOP_GAP = 8;
+
+const showKeyboardEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+const hideKeyboardEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+const syncKeyboardLayoutAnimation = (event: KeyboardEvent) => {
+  if (Platform.OS !== 'ios') {
+    return;
+  }
+
+  const duration = event.duration > 10 ? event.duration : 10;
+
+  LayoutAnimation.configureNext({
+    duration,
+    update: {
+      duration,
+      type: LayoutAnimation.Types[event.easing] || LayoutAnimation.Types.keyboard,
+    },
+  });
+};
 
 interface TitleEditModalProps {
   editingLink: SavedLink | null;
@@ -23,20 +49,51 @@ interface TitleEditModalProps {
 }
 
 export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditModalProps) {
+  const insets = useSafeAreaInsets();
   const [titleValue, setTitleValue] = useState('');
   const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
+  const [keyboardInset, setKeyboardInset] = useState(0);
   const titleInputRef = useRef<TextInput>(null);
+  const titleFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearTitleFocusTimer = useCallback(() => {
+    if (titleFocusTimerRef.current) {
+      clearTimeout(titleFocusTimerRef.current);
+      titleFocusTimerRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     if (!editingLink) {
       setTitleValue('');
+      setKeyboardInset(0);
+      clearTitleFocusTimer();
       return;
     }
 
     setTitleValue(editingLink.title);
-    const focusTimer = setTimeout(() => titleInputRef.current?.focus(), 100);
+  }, [clearTitleFocusTimer, editingLink]);
 
-    return () => clearTimeout(focusTimer);
+  useEffect(() => clearTitleFocusTimer, [clearTitleFocusTimer]);
+
+  useEffect(() => {
+    if (!editingLink) {
+      return;
+    }
+
+    const showSubscription = Keyboard.addListener(showKeyboardEvent, (event) => {
+      syncKeyboardLayoutAnimation(event);
+      setKeyboardInset(event.endCoordinates.height);
+    });
+    const hideSubscription = Keyboard.addListener(hideKeyboardEvent, (event) => {
+      syncKeyboardLayoutAnimation(event);
+      setKeyboardInset(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
   }, [editingLink]);
 
   const handleClose = useCallback(() => {
@@ -44,8 +101,18 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
       return;
     }
 
+    clearTitleFocusTimer();
     onClose();
-  }, [isUpdatingTitle, onClose]);
+  }, [clearTitleFocusTimer, isUpdatingTitle, onClose]);
+
+  const handleModalShow = useCallback(() => {
+    clearTitleFocusTimer();
+
+    titleFocusTimerRef.current = setTimeout(() => {
+      titleInputRef.current?.focus();
+      titleFocusTimerRef.current = null;
+    }, 100);
+  }, [clearTitleFocusTimer]);
 
   const handleConfirm = useCallback(async () => {
     const trimmedTitle = titleValue.trim();
@@ -58,6 +125,7 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
 
     try {
       await onConfirm(editingLink.id, trimmedTitle);
+      clearTitleFocusTimer();
       onClose();
     } catch (error) {
       showAlert(
@@ -67,7 +135,7 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
     } finally {
       setIsUpdatingTitle(false);
     }
-  }, [editingLink, isUpdatingTitle, onClose, onConfirm, titleValue]);
+  }, [clearTitleFocusTimer, editingLink, isUpdatingTitle, onClose, onConfirm, titleValue]);
 
   const trimmedTitleValue = titleValue.trim();
   const titleSubmitDisabled =
@@ -81,6 +149,10 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
     disabled: isUpdatingTitle,
     lockMs: 250,
   });
+  const restingBottomInset = Math.max(insets.bottom, MODAL_BOTTOM_GAP);
+  const modalBottomInset = keyboardInset > 0
+    ? keyboardInset + KEYBOARD_TOP_GAP
+    : restingBottomInset;
 
   return (
     <Modal
@@ -88,58 +160,66 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
       transparent
       animationType="fade"
       onRequestClose={guardedClose}
+      onShow={handleModalShow}
     >
-      <KeyboardAvoidingView
-        style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      <View
+        style={[
+          styles.overlay,
+          { paddingBottom: modalBottomInset },
+        ]}
       >
         <Pressable style={styles.backdrop} onPress={guardedClose} />
         <View style={styles.sheet}>
-          <Text style={styles.sheetTitle}>제목 수정</Text>
-          <View style={styles.inputRow}>
-            <TextInput
-              ref={titleInputRef}
-              style={styles.input}
-              value={titleValue}
-              onChangeText={setTitleValue}
-              placeholder="URL 제목 입력"
-              placeholderTextColor={Colors.brand.textHint}
-              returnKeyType="done"
-              onSubmitEditing={guardedConfirm}
-              maxLength={500}
-              editable={!isUpdatingTitle}
-              autoFocus
-            />
-            {titleValue.length > 0 && !isUpdatingTitle && (
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.sheetContent}
+          >
+            <Text style={styles.sheetTitle}>제목 수정</Text>
+            <View style={styles.inputRow}>
+              <TextInput
+                ref={titleInputRef}
+                style={styles.input}
+                value={titleValue}
+                onChangeText={setTitleValue}
+                placeholder="URL 제목 입력"
+                placeholderTextColor={Colors.brand.textHint}
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+                maxLength={500}
+                editable={!isUpdatingTitle}
+              />
+              {titleValue.length > 0 && !isUpdatingTitle && (
+                <TouchableOpacity
+                  onPress={guardedClearTitle}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={styles.clearButton}
+                >
+                  <Text style={styles.clearButtonText}>−</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <View style={styles.actions}>
               <TouchableOpacity
-                onPress={guardedClearTitle}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={styles.clearButton}
+                style={styles.cancelBtn}
+                onPress={guardedClose}
+                disabled={isUpdatingTitle}
               >
-                <Text style={styles.clearButtonText}>−</Text>
+                <Text style={styles.cancelText}>취소</Text>
               </TouchableOpacity>
-            )}
-          </View>
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={styles.cancelBtn}
-              onPress={guardedClose}
-              disabled={isUpdatingTitle}
-            >
-              <Text style={styles.cancelText}>취소</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.confirmBtn, titleSubmitDisabled && styles.confirmBtnDisabled]}
-              onPress={guardedConfirm}
-              disabled={titleSubmitDisabled}
-            >
-              <Text style={[styles.confirmText, titleSubmitDisabled && styles.confirmTextDisabled]}>
-                {isUpdatingTitle ? '저장 중...' : '저장'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                style={[styles.confirmBtn, titleSubmitDisabled && styles.confirmBtnDisabled]}
+                onPress={guardedConfirm}
+                disabled={titleSubmitDisabled}
+              >
+                <Text style={[styles.confirmText, titleSubmitDisabled && styles.confirmTextDisabled]}>
+                  {isUpdatingTitle ? '저장 중...' : '저장'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
@@ -154,9 +234,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.brand.overlayBackdrop,
   },
   sheet: {
+    width: '100%',
+    maxHeight: '80%',
     backgroundColor: Colors.brand.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    overflow: 'hidden',
+  },
+  sheetContent: {
     padding: 24,
     paddingBottom: 40,
     gap: 16,
