@@ -87,6 +87,7 @@ export default function FolderScreen() {
   const [renameToastVisible, setRenameToastVisible] = useState(false);
   const lastCreatedToastRef = useRef<string | undefined>(undefined);
   const renameInputRef = useRef<TextInput>(null);
+  const renameFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const folderCreated = typeof folderCreatedParam === 'string' ? folderCreatedParam : undefined;
 
   const folders = useMemo(
@@ -106,6 +107,14 @@ export default function FolderScreen() {
     lastCreatedToastRef.current = folderCreated;
     setCreateToastVisible(true);
   }, [folderCreated]);
+
+  useEffect(() => {
+    return () => {
+      if (renameFocusTimerRef.current) {
+        clearTimeout(renameFocusTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!renameState.visible) {
@@ -141,6 +150,10 @@ export default function FolderScreen() {
     setIsMutating(true);
     try {
       await renameFolder(renameState.folderId, trimmed);
+      if (renameFocusTimerRef.current) {
+        clearTimeout(renameFocusTimerRef.current);
+        renameFocusTimerRef.current = null;
+      }
       setRenameState({ visible: false, value: '', currentName: '' });
       setRenameToastVisible(true);
     } catch (error) {
@@ -154,7 +167,22 @@ export default function FolderScreen() {
   };
 
   const handleRenameCancel = () => {
+    if (renameFocusTimerRef.current) {
+      clearTimeout(renameFocusTimerRef.current);
+      renameFocusTimerRef.current = null;
+    }
     setRenameState({ visible: false, value: '', currentName: '' });
+  };
+
+  const handleRenameModalShow = () => {
+    if (renameFocusTimerRef.current) {
+      clearTimeout(renameFocusTimerRef.current);
+    }
+
+    renameFocusTimerRef.current = setTimeout(() => {
+      renameInputRef.current?.focus();
+      renameFocusTimerRef.current = null;
+    }, 100);
   };
 
   const handleDelete = () => {
@@ -289,6 +317,7 @@ export default function FolderScreen() {
         transparent
         animationType="fade"
         onRequestClose={handleRenameCancel}
+        onShow={handleRenameModalShow}
       >
         <View
           style={[
@@ -315,7 +344,6 @@ export default function FolderScreen() {
                   returnKeyType="done"
                   onSubmitEditing={Keyboard.dismiss}
                   maxLength={50}
-                  autoFocus
                 />
                 {renameState.value.length > 0 && (
                   <TouchableOpacity

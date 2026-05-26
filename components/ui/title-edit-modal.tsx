@@ -53,19 +53,27 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
   const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
   const [keyboardInset, setKeyboardInset] = useState(0);
   const titleInputRef = useRef<TextInput>(null);
+  const titleFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearTitleFocusTimer = useCallback(() => {
+    if (titleFocusTimerRef.current) {
+      clearTimeout(titleFocusTimerRef.current);
+      titleFocusTimerRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     if (!editingLink) {
       setTitleValue('');
       setKeyboardInset(0);
+      clearTitleFocusTimer();
       return;
     }
 
     setTitleValue(editingLink.title);
-    const focusTimer = setTimeout(() => titleInputRef.current?.focus(), 100);
+  }, [clearTitleFocusTimer, editingLink]);
 
-    return () => clearTimeout(focusTimer);
-  }, [editingLink]);
+  useEffect(() => clearTitleFocusTimer, [clearTitleFocusTimer]);
 
   useEffect(() => {
     if (!editingLink) {
@@ -92,8 +100,18 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
       return;
     }
 
+    clearTitleFocusTimer();
     onClose();
-  }, [isUpdatingTitle, onClose]);
+  }, [clearTitleFocusTimer, isUpdatingTitle, onClose]);
+
+  const handleModalShow = useCallback(() => {
+    clearTitleFocusTimer();
+
+    titleFocusTimerRef.current = setTimeout(() => {
+      titleInputRef.current?.focus();
+      titleFocusTimerRef.current = null;
+    }, 100);
+  }, [clearTitleFocusTimer]);
 
   const handleConfirm = useCallback(async () => {
     const trimmedTitle = titleValue.trim();
@@ -106,6 +124,7 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
 
     try {
       await onConfirm(editingLink.id, trimmedTitle);
+      clearTitleFocusTimer();
       onClose();
     } catch (error) {
       Alert.alert(
@@ -115,7 +134,7 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
     } finally {
       setIsUpdatingTitle(false);
     }
-  }, [editingLink, isUpdatingTitle, onClose, onConfirm, titleValue]);
+  }, [clearTitleFocusTimer, editingLink, isUpdatingTitle, onClose, onConfirm, titleValue]);
 
   const trimmedTitleValue = titleValue.trim();
   const titleSubmitDisabled =
@@ -134,6 +153,7 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
       transparent
       animationType="fade"
       onRequestClose={handleClose}
+      onShow={handleModalShow}
     >
       <View
         style={[
@@ -161,7 +181,6 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
                 onSubmitEditing={Keyboard.dismiss}
                 maxLength={500}
                 editable={!isUpdatingTitle}
-                autoFocus
               />
               {titleValue.length > 0 && !isUpdatingTitle && (
                 <TouchableOpacity
