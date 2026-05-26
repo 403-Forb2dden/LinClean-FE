@@ -145,12 +145,15 @@ export default function NoticesScreen() {
   const handleRetry = useCallback(() => {
     startLoadNotices();
   }, [startLoadNotices]);
-  const guardedOpenNotice = useGuardedPress((id: number) =>
+
+  const openNotice = useCallback((id: number) => {
     router.push({
       pathname: '/(tabs)/(home)/notice-detail' as any,
       params: { id: String(id) },
-    }),
-  );
+    });
+  }, []);
+
+  const guardedOpenNotice = useGuardedPress(openNotice);
 
   const renderNotice = useCallback(
     ({ item }: { item: NoticeListItemResponse }) => (
