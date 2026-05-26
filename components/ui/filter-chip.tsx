@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Typography } from '@/constants/theme';
 
@@ -9,6 +9,9 @@ const LABEL_MAX_WIDTH = Typography.caption.fontSize * MAX_VISIBLE_LABEL_CHARS;
 const DROPDOWN_MIN_WIDTH = 120;
 const DROPDOWN_HORIZONTAL_PADDING = 32;
 const DROPDOWN_MAX_CONTENT_WIDTH = LABEL_MAX_WIDTH + DROPDOWN_HORIZONTAL_PADDING;
+const DROPDOWN_MAX_HEIGHT_RATIO = 0.6;
+const DROPDOWN_SCREEN_PADDING = 20;
+const DROPDOWN_MIN_HEIGHT = 120;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,52 +40,71 @@ interface DropdownProps {
   selectedValue: string;
   onSelect: (value: string) => void;
   width: number;
+  maxHeight: number;
+  left: number;
+  top: number;
+  onDismiss: () => void;
 }
 
-function Dropdown({ items, selectedValue, onSelect, width }: DropdownProps) {
+function Dropdown({ items, selectedValue, onSelect, width, maxHeight, left, top, onDismiss }: DropdownProps) {
   return (
-    <View style={[dropdownStyles.container, { width }]}>
-      {items.map((item, index) => {
-        const isSelected = item.value === selectedValue;
-        const isLast = index === items.length - 1;
+    <Modal transparent visible animationType="none" onRequestClose={onDismiss}>
+      <View style={dropdownStyles.modalRoot}>
+        <Pressable style={dropdownStyles.backdrop} onPress={onDismiss} />
+        <View style={[dropdownStyles.container, { width, maxHeight, left, top }]}>
+          <ScrollView
+            style={dropdownStyles.scroll}
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={items.length > 6}
+            keyboardShouldPersistTaps="handled"
+          >
+            {items.map((item, index) => {
+              const isSelected = item.value === selectedValue;
+              const isLast = index === items.length - 1;
 
-        return (
-          <View key={item.value}>
-            <Pressable
-              onPress={() => onSelect(item.value)}
-              style={({ pressed }) => [
-                dropdownStyles.item,
-                isSelected && dropdownStyles.itemSelected,
-                pressed && dropdownStyles.itemPressed,
-              ]}
-              accessibilityRole="menuitem"
-              accessibilityState={{ selected: isSelected }}
-            >
-              <Text
-                style={[
-                  dropdownStyles.itemLabel,
-                  { color: isSelected ? Colors.brand.text : Colors.brand.textSecondary },
-                ]}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
-                {item.label}
-              </Text>
-            </Pressable>
-            {!isLast && <View style={dropdownStyles.divider} />}
-          </View>
-        );
-      })}
-    </View>
+              return (
+                <View key={item.value}>
+                  <Pressable
+                    onPress={() => onSelect(item.value)}
+                    style={({ pressed }) => [
+                      dropdownStyles.item,
+                      isSelected && dropdownStyles.itemSelected,
+                      pressed && dropdownStyles.itemPressed,
+                    ]}
+                    accessibilityRole="menuitem"
+                    accessibilityState={{ selected: isSelected }}
+                  >
+                    <Text
+                      style={[
+                        dropdownStyles.itemLabel,
+                        { color: isSelected ? Colors.brand.text : Colors.brand.textSecondary },
+                      ]}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                  {!isLast && <View style={dropdownStyles.divider} />}
+                </View>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
 const dropdownStyles = StyleSheet.create({
+  modalRoot: {
+    flex: 1,
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
   container: {
     position: 'absolute',
-    top: '100%',
-    left: 0,
-    marginTop: 4,
     backgroundColor: Colors.brand.surface,
     borderRadius: 10,
     minWidth: DROPDOWN_MIN_WIDTH,
@@ -93,6 +115,9 @@ const dropdownStyles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
     overflow: 'hidden',
+  },
+  scroll: {
+    flexGrow: 0,
   },
   item: {
     paddingVertical: 12,
@@ -127,7 +152,9 @@ export function FilterChip({
   onPress,
 }: FilterChipProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const { width } = useWindowDimensions();
+  const [chipBounds, setChipBounds] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const wrapperRef = useRef<View>(null);
+  const { width, height } = useWindowDimensions();
 
   const currentItem = items.find((i) => i.value === selectedValue);
   const displayLabel = label ?? currentItem?.label ?? '';
@@ -135,6 +162,15 @@ export function FilterChip({
   const dropdownWidth = Math.min(
     hasLongDropdownItem ? DROPDOWN_MAX_CONTENT_WIDTH : DROPDOWN_MIN_WIDTH,
     Math.max(DROPDOWN_MIN_WIDTH, width - 40),
+  );
+  const dropdownLeft = Math.max(
+    DROPDOWN_SCREEN_PADDING,
+    Math.min(chipBounds.x, width - dropdownWidth - DROPDOWN_SCREEN_PADDING),
+  );
+  const dropdownTop = chipBounds.y + chipBounds.height + 4;
+  const dropdownMaxHeight = Math.max(
+    DROPDOWN_MIN_HEIGHT,
+    Math.min(height * DROPDOWN_MAX_HEIGHT_RATIO, height - dropdownTop - DROPDOWN_SCREEN_PADDING),
   );
 
   const isActive = variant === 'active';
@@ -145,7 +181,14 @@ export function FilterChip({
   function handlePress() {
     if (disabled) return;
     if (isActive && items.length > 0) {
-      setIsOpen((prev) => !prev);
+      if (isOpen) {
+        setIsOpen(false);
+      } else {
+        wrapperRef.current?.measureInWindow((x, y, measuredWidth, measuredHeight) => {
+          setChipBounds({ x, y, width: measuredWidth, height: measuredHeight });
+          setIsOpen(true);
+        });
+      }
     }
     onPress?.();
   }
@@ -156,7 +199,7 @@ export function FilterChip({
   }
 
   return (
-    <View style={chipStyles.wrapper}>
+    <View ref={wrapperRef} style={chipStyles.wrapper}>
       <Pressable
         onPress={handlePress}
         style={({ pressed }) => [
@@ -191,6 +234,10 @@ export function FilterChip({
           selectedValue={selectedValue ?? ''}
           onSelect={handleSelect}
           width={dropdownWidth}
+          maxHeight={dropdownMaxHeight}
+          left={dropdownLeft}
+          top={dropdownTop}
+          onDismiss={() => setIsOpen(false)}
         />
       )}
     </View>
