@@ -34,8 +34,8 @@ export function FolderCard({
   const cardWidth = width ?? DEFAULT_CARD_WIDTH;
 
   const handleMorePress = () => {
-    moreRef.current?.measure((_fx, _fy, width, height, px, py) => {
-      onMorePress?.({ x: px, y: py, width, height });
+    moreRef.current?.measure((_fx, _fy, measuredWidth, measuredHeight, px, py) => {
+      onMorePress?.({ x: px, y: py, width: measuredWidth, height: measuredHeight });
     });
   };
 
