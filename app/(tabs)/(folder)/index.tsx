@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
+  Keyboard,
+  LayoutAnimation,
   Modal,
   Platform,
   Pressable,
@@ -12,8 +13,9 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  type KeyboardEvent,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AddFolderButton } from '@/components/ui/add-folder-button';
 import { FolderCard } from '@/components/ui/folder-card';
@@ -31,7 +33,30 @@ type MenuState = {
   folderId?: number;
 };
 
+const RENAME_MODAL_BOTTOM_GAP = 16;
+const RENAME_KEYBOARD_TOP_GAP = 8;
+
+const showKeyboardEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+const hideKeyboardEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+const syncKeyboardLayoutAnimation = (event: KeyboardEvent) => {
+  if (Platform.OS !== 'ios') {
+    return;
+  }
+
+  const duration = event.duration > 10 ? event.duration : 10;
+
+  LayoutAnimation.configureNext({
+    duration,
+    update: {
+      duration,
+      type: LayoutAnimation.Types[event.easing] || LayoutAnimation.Types.keyboard,
+    },
+  });
+};
+
 export default function FolderScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { folderCreated: folderCreatedParam } = useLocalSearchParams<{
     folderCreated?: string | string[];
@@ -56,11 +81,13 @@ export default function FolderScreen() {
     currentName: '',
   });
   const [isMutating, setIsMutating] = useState(false);
+  const [renameKeyboardInset, setRenameKeyboardInset] = useState(0);
   const [createToastVisible, setCreateToastVisible] = useState(false);
   const [deleteToastVisible, setDeleteToastVisible] = useState(false);
   const [renameToastVisible, setRenameToastVisible] = useState(false);
   const lastCreatedToastRef = useRef<string | undefined>(undefined);
   const renameInputRef = useRef<TextInput>(null);
+  const renameFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const folderCreated = typeof folderCreatedParam === 'string' ? folderCreatedParam : undefined;
 
   const folders = useMemo(
@@ -81,11 +108,39 @@ export default function FolderScreen() {
     setCreateToastVisible(true);
   }, [folderCreated]);
 
+  useEffect(() => {
+    return () => {
+      if (renameFocusTimerRef.current) {
+        clearTimeout(renameFocusTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!renameState.visible) {
+      setRenameKeyboardInset(0);
+      return;
+    }
+
+    const showSubscription = Keyboard.addListener(showKeyboardEvent, (event) => {
+      syncKeyboardLayoutAnimation(event);
+      setRenameKeyboardInset(event.endCoordinates.height);
+    });
+    const hideSubscription = Keyboard.addListener(hideKeyboardEvent, (event) => {
+      syncKeyboardLayoutAnimation(event);
+      setRenameKeyboardInset(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [renameState.visible]);
+
   const handleEditName = () => {
     if (menuState.folderId == null) return;
     const current = folders.find((f) => f.id === menuState.folderId)?.name ?? '';
     setRenameState({ visible: true, folderId: menuState.folderId, value: current, currentName: current });
-    setTimeout(() => renameInputRef.current?.focus(), 100);
   };
 
   const handleRenameConfirm = async () => {
@@ -95,6 +150,10 @@ export default function FolderScreen() {
     setIsMutating(true);
     try {
       await renameFolder(renameState.folderId, trimmed);
+      if (renameFocusTimerRef.current) {
+        clearTimeout(renameFocusTimerRef.current);
+        renameFocusTimerRef.current = null;
+      }
       setRenameState({ visible: false, value: '', currentName: '' });
       setRenameToastVisible(true);
     } catch (error) {
@@ -108,7 +167,22 @@ export default function FolderScreen() {
   };
 
   const handleRenameCancel = () => {
+    if (renameFocusTimerRef.current) {
+      clearTimeout(renameFocusTimerRef.current);
+      renameFocusTimerRef.current = null;
+    }
     setRenameState({ visible: false, value: '', currentName: '' });
+  };
+
+  const handleRenameModalShow = () => {
+    if (renameFocusTimerRef.current) {
+      clearTimeout(renameFocusTimerRef.current);
+    }
+
+    renameFocusTimerRef.current = setTimeout(() => {
+      renameInputRef.current?.focus();
+      renameFocusTimerRef.current = null;
+    }, 100);
   };
 
   const handleDelete = () => {
@@ -149,6 +223,10 @@ export default function FolderScreen() {
     trimmedRenameValue.length === 0 ||
     trimmedRenameValue === renameState.currentName.trim() ||
     isMutating;
+  const renameRestingBottomInset = Math.max(insets.bottom, RENAME_MODAL_BOTTOM_GAP);
+  const renameModalBottomInset = renameKeyboardInset > 0
+    ? renameKeyboardInset + RENAME_KEYBOARD_TOP_GAP
+    : renameRestingBottomInset;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -239,53 +317,64 @@ export default function FolderScreen() {
         transparent
         animationType="fade"
         onRequestClose={handleRenameCancel}
+        onShow={handleRenameModalShow}
       >
-        <KeyboardAvoidingView
-          style={renameStyles.overlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        <View
+          style={[
+            renameStyles.overlay,
+            { paddingBottom: renameModalBottomInset },
+          ]}
         >
           <Pressable style={renameStyles.backdrop} onPress={handleRenameCancel} />
           <View style={renameStyles.sheet}>
-            <Text style={renameStyles.sheetTitle}>폴더명 수정</Text>
-            <View style={renameStyles.inputRow}>
-              <TextInput
-                ref={renameInputRef}
-                style={renameStyles.input}
-                value={renameState.value}
-                onChangeText={(v) => setRenameState((s) => ({ ...s, value: v }))}
-                placeholder="폴더 이름 입력"
-                placeholderTextColor={Colors.brand.textHint}
-                returnKeyType="done"
-                onSubmitEditing={handleRenameConfirm}
-                maxLength={50}
-                autoFocus
-              />
-              {renameState.value.length > 0 && (
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={renameStyles.sheetContent}
+            >
+              <Text style={renameStyles.sheetTitle}>폴더명 수정</Text>
+              <View style={renameStyles.inputRow}>
+                <TextInput
+                  ref={renameInputRef}
+                  style={renameStyles.input}
+                  value={renameState.value}
+                  onChangeText={(v) => setRenameState((s) => ({ ...s, value: v }))}
+                  placeholder="폴더 이름 입력"
+                  placeholderTextColor={Colors.brand.textHint}
+                  returnKeyType="done"
+                  onSubmitEditing={Keyboard.dismiss}
+                  maxLength={50}
+                />
+                {renameState.value.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => setRenameState((s) => ({ ...s, value: '' }))}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={renameStyles.clearButton}
+                  >
+                    <Text style={renameStyles.clearButtonText}>−</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <View style={renameStyles.actions}>
                 <TouchableOpacity
-                  onPress={() => setRenameState((s) => ({ ...s, value: '' }))}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  style={renameStyles.clearButton}
+                  style={renameStyles.cancelBtn}
+                  onPress={handleRenameCancel}
                 >
-                  <Text style={renameStyles.clearButtonText}>−</Text>
+                  <Text style={renameStyles.cancelText}>취소</Text>
                 </TouchableOpacity>
-              )}
-            </View>
-            <View style={renameStyles.actions}>
-              <TouchableOpacity style={renameStyles.cancelBtn} onPress={handleRenameCancel}>
-                <Text style={renameStyles.cancelText}>취소</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[renameStyles.confirmBtn, renameSubmitDisabled && renameStyles.confirmBtnDisabled]}
-                onPress={handleRenameConfirm}
-                disabled={renameSubmitDisabled}
-              >
-                <Text style={[renameStyles.confirmText, renameSubmitDisabled && renameStyles.confirmTextDisabled]}>
-                  저장
-                </Text>
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity
+                  style={[renameStyles.confirmBtn, renameSubmitDisabled && renameStyles.confirmBtnDisabled]}
+                  onPress={handleRenameConfirm}
+                  disabled={renameSubmitDisabled}
+                >
+                  <Text style={[renameStyles.confirmText, renameSubmitDisabled && renameStyles.confirmTextDisabled]}>
+                    저장
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -373,9 +462,14 @@ const renameStyles = StyleSheet.create({
     backgroundColor: Colors.brand.overlayBackdrop,
   },
   sheet: {
+    width: '100%',
+    maxHeight: '80%',
     backgroundColor: Colors.brand.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    overflow: 'hidden',
+  },
+  sheetContent: {
     padding: 24,
     paddingBottom: 40,
     gap: 16,
