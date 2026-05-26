@@ -3,7 +3,9 @@ import {
   ActivityIndicator,
   Alert,
   Keyboard,
+  LayoutAnimation,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,6 +13,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  type KeyboardEvent,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -32,6 +35,25 @@ type MenuState = {
 
 const RENAME_MODAL_BOTTOM_GAP = 16;
 const RENAME_KEYBOARD_TOP_GAP = 8;
+
+const showKeyboardEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+const hideKeyboardEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+const syncKeyboardLayoutAnimation = (event: KeyboardEvent) => {
+  if (Platform.OS !== 'ios') {
+    return;
+  }
+
+  const duration = event.duration > 10 ? event.duration : 10;
+
+  LayoutAnimation.configureNext({
+    duration,
+    update: {
+      duration,
+      type: LayoutAnimation.Types[event.easing] || LayoutAnimation.Types.keyboard,
+    },
+  });
+};
 
 export default function FolderScreen() {
   const insets = useSafeAreaInsets();
@@ -91,10 +113,12 @@ export default function FolderScreen() {
       return;
     }
 
-    const showSubscription = Keyboard.addListener('keyboardDidShow', (event) => {
+    const showSubscription = Keyboard.addListener(showKeyboardEvent, (event) => {
+      syncKeyboardLayoutAnimation(event);
       setRenameKeyboardInset(event.endCoordinates.height);
     });
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+    const hideSubscription = Keyboard.addListener(hideKeyboardEvent, (event) => {
+      syncKeyboardLayoutAnimation(event);
       setRenameKeyboardInset(0);
     });
 

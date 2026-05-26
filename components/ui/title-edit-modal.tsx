@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Keyboard,
+  LayoutAnimation,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,6 +12,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  type KeyboardEvent,
 } from 'react-native';
 
 import { Colors, Typography } from '@/constants/theme';
@@ -18,6 +21,25 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const MODAL_BOTTOM_GAP = 16;
 const KEYBOARD_TOP_GAP = 8;
+
+const showKeyboardEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+const hideKeyboardEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+const syncKeyboardLayoutAnimation = (event: KeyboardEvent) => {
+  if (Platform.OS !== 'ios') {
+    return;
+  }
+
+  const duration = event.duration > 10 ? event.duration : 10;
+
+  LayoutAnimation.configureNext({
+    duration,
+    update: {
+      duration,
+      type: LayoutAnimation.Types[event.easing] || LayoutAnimation.Types.keyboard,
+    },
+  });
+};
 
 interface TitleEditModalProps {
   editingLink: SavedLink | null;
@@ -50,10 +72,12 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
       return;
     }
 
-    const showSubscription = Keyboard.addListener('keyboardDidShow', (event) => {
+    const showSubscription = Keyboard.addListener(showKeyboardEvent, (event) => {
+      syncKeyboardLayoutAnimation(event);
       setKeyboardInset(event.endCoordinates.height);
     });
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+    const hideSubscription = Keyboard.addListener(hideKeyboardEvent, (event) => {
+      syncKeyboardLayoutAnimation(event);
       setKeyboardInset(0);
     });
 
