@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -75,7 +76,7 @@ export function LinkSaveModal({
               placeholder="예: 네이버 블로그"
               placeholderTextColor={Colors.brand.textHint}
               returnKeyType="done"
-              onSubmitEditing={handleSave}
+              onSubmitEditing={Keyboard.dismiss}
               maxLength={500}
               editable={!loading}
               autoFocus
