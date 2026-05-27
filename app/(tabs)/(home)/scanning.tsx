@@ -2,11 +2,12 @@ import { useAuth } from '@clerk/expo';
 import LottieView from 'lottie-react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { BackHandler, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { fetchAnalysis, requestAnalysis, type AnalysisResponse, type AnalysisVerdict } from '@/api/analyses';
 import { ApiError } from '@/api/api-client';
 import { Colors, Typography } from '@/constants/theme';
+import { AppIcon } from '@/components/ui/app-icon';
 
 const POLLING_INTERVAL_MS = 2_000;
 const MAX_POLLING_MS = 30_000;
@@ -88,6 +89,19 @@ export default function ScanningScreen() {
   }, [isLoaded, isSignedIn, retryKey, url]);
 
   const hasError = errorMessage.length > 0;
+  const isScanning = !hasError;
+
+  useEffect(() => {
+    if (!isScanning) {
+      return undefined;
+    }
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => true);
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isScanning]);
 
   return (
     <>
@@ -100,6 +114,17 @@ export default function ScanningScreen() {
           headerTitleStyle: { ...Typography.title, color: Colors.brand.text },
           headerTintColor: Colors.brand.text,
           headerShadowVisible: false,
+          headerBackVisible: !isScanning,
+          gestureEnabled: !isScanning,
+          headerLeft: isScanning
+            ? () => (
+                <AppIcon
+                  name="back"
+                  disabled
+                  style={styles.headerBackButton}
+                />
+              )
+            : undefined,
         }}
       />
       <View style={styles.container}>
@@ -297,6 +322,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingTop: 40,
+  },
+  headerBackButton: {
+    width: 44,
+    height: 44,
   },
   animationWrapper: {
     width: 280,
