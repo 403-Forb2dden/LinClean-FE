@@ -1,5 +1,6 @@
 import { useAuth } from '@clerk/expo';
 import LottieView from 'lottie-react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -9,15 +10,17 @@ import { ApiError } from '@/api/api-client';
 import { Colors, Typography } from '@/constants/theme';
 
 const POLLING_INTERVAL_MS = 2_000;
-const MAX_POLLING_MS = 30_000;
+const SCAN_SCREEN_TIMEOUT_MS = 20_000;
 
 export default function ScanningScreen() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
+  const isFocused = useIsFocused();
   const { url: urlParam } = useLocalSearchParams<{ url?: string | string[] }>();
   const url = getUrlParam(urlParam);
   const [errorMessage, setErrorMessage] = useState('');
   const [retryKey, setRetryKey] = useState(0);
   const getTokenRef = useRef(getToken);
+  const currentAbortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     getTokenRef.current = getToken;
@@ -25,44 +28,77 @@ export default function ScanningScreen() {
 
   useEffect(() => {
     const abortController = new AbortController();
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-    let timedOut = false;
+    let screenTimeoutId: ReturnType<typeof setTimeout> | null = null;
+    let isActive = true;
+    let didTimeout = false;
+    let hasNavigated = false;
+
+    const clearScreenTimeout = () => {
+      if (screenTimeoutId) {
+        clearTimeout(screenTimeoutId);
+        screenTimeoutId = null;
+      }
+    };
+
+    const handleScreenTimeout = () => {
+      if (!isActive || didTimeout || hasNavigated) {
+        return;
+      }
+
+      didTimeout = true;
+      abortController.abort();
+      setErrorMessage(getAnalysisErrorMessage(new Error('TIMEOUT')));
+    };
+
+    currentAbortControllerRef.current = abortController;
 
     if (!isLoaded) {
-      return () => abortController.abort();
+      return () => {
+        isActive = false;
+        if (currentAbortControllerRef.current === abortController) {
+          currentAbortControllerRef.current = null;
+        }
+        abortController.abort();
+      };
     }
 
     if (!isSignedIn) {
       setErrorMessage('로그인 상태를 확인할 수 없습니다. 다시 로그인한 뒤 시도해주세요.');
-      return () => abortController.abort();
+      return () => {
+        isActive = false;
+        if (currentAbortControllerRef.current === abortController) {
+          currentAbortControllerRef.current = null;
+        }
+        abortController.abort();
+      };
     }
 
     if (!url) {
       setErrorMessage('검사할 URL을 찾을 수 없습니다. 링크를 다시 입력해주세요.');
-      return () => abortController.abort();
+      return () => {
+        isActive = false;
+        if (currentAbortControllerRef.current === abortController) {
+          currentAbortControllerRef.current = null;
+        }
+        abortController.abort();
+      };
     }
 
     setErrorMessage('');
+    screenTimeoutId = setTimeout(handleScreenTimeout, SCAN_SCREEN_TIMEOUT_MS);
 
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(() => {
-        timedOut = true;
-        abortController.abort();
-        reject(new Error('TIMEOUT'));
-      }, MAX_POLLING_MS);
-    });
-
-    Promise.race([
-      runAnalysisPolling({
-        getToken: () => getTokenRef.current(),
-        url,
-        signal: abortController.signal,
-      }),
-      timeoutPromise,
-    ])
+    runAnalysisPolling({
+      getToken: () => getTokenRef.current(),
+      url,
+      signal: abortController.signal,
+      canNavigate: () => isActive && !didTimeout && !hasNavigated,
+      onNavigate: () => {
+        hasNavigated = true;
+        clearScreenTimeout();
+      },
+    })
       .catch((error) => {
-        if (timedOut) {
-          setErrorMessage(getAnalysisErrorMessage(new Error('TIMEOUT')));
+        if (!isActive || hasNavigated || didTimeout) {
           return;
         }
 
@@ -73,21 +109,34 @@ export default function ScanningScreen() {
         setErrorMessage(getAnalysisErrorMessage(error));
       })
       .finally(() => {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-        }
+        clearScreenTimeout();
       });
 
     return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
+      isActive = false;
+      clearScreenTimeout();
+      if (currentAbortControllerRef.current === abortController) {
+        currentAbortControllerRef.current = null;
       }
-
       abortController.abort();
     };
   }, [isLoaded, isSignedIn, retryKey, url]);
 
   const hasError = errorMessage.length > 0;
+  const isScanningAnimationVisible = isFocused && !hasError;
+
+  useEffect(() => {
+    if (!isScanningAnimationVisible) {
+      return undefined;
+    }
+
+    const animationTimeoutId = setTimeout(() => {
+      currentAbortControllerRef.current?.abort();
+      setErrorMessage(getAnalysisErrorMessage(new Error('TIMEOUT')));
+    }, SCAN_SCREEN_TIMEOUT_MS);
+
+    return () => clearTimeout(animationTimeoutId);
+  }, [isScanningAnimationVisible, retryKey, url]);
 
   return (
     <>
@@ -107,8 +156,8 @@ export default function ScanningScreen() {
         <View style={styles.animationWrapper}>
           <LottieView
             source={require('@/assets/animations/scanning.json')}
-            autoPlay={!hasError}
-            loop={!hasError}
+            autoPlay={isScanningAnimationVisible}
+            loop={isScanningAnimationVisible}
             style={styles.animation}
           />
           <View style={styles.dotsOverlay}>
@@ -161,16 +210,20 @@ async function runAnalysisPolling({
   getToken,
   url,
   signal,
+  canNavigate,
+  onNavigate,
 }: {
   getToken: () => Promise<string | null>;
   url: string;
   signal: AbortSignal;
+  canNavigate: () => boolean;
+  onNavigate: () => void;
 }) {
-  const deadline = Date.now() + MAX_POLLING_MS;
+  const deadline = Date.now() + SCAN_SCREEN_TIMEOUT_MS;
   let analysis = await requestAnalysis(getToken, url, { signal });
 
   while (!signal.aborted) {
-    const handled = handleAnalysisResult(analysis, url, signal);
+    const handled = handleAnalysisResult(analysis, url, signal, canNavigate, onNavigate);
 
     if (handled) {
       return;
@@ -187,7 +240,13 @@ async function runAnalysisPolling({
   }
 }
 
-function handleAnalysisResult(analysis: AnalysisResponse, fallbackUrl: string, signal: AbortSignal) {
+function handleAnalysisResult(
+  analysis: AnalysisResponse,
+  fallbackUrl: string,
+  signal: AbortSignal,
+  canNavigate: () => boolean,
+  onNavigate: () => void,
+) {
   if (analysis.status === 'queued') {
     return false;
   }
@@ -200,7 +259,8 @@ function handleAnalysisResult(analysis: AnalysisResponse, fallbackUrl: string, s
     throw new Error('MISSING_VERDICT');
   }
 
-  if (!signal.aborted) {
+  if (!signal.aborted && canNavigate()) {
+    onNavigate();
     router.replace({
       pathname: getResultPath(analysis.verdict),
       params: {
