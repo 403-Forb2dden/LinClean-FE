@@ -100,7 +100,7 @@ export default function ScanResultScreen() {
         <Stack.Screen
           options={{
             headerShown: true,
-            title: '寃??寃곌낵',
+            title: '검사 결과',
             headerBackTitle: '',
             headerStyle: { backgroundColor: Colors.brand.background },
             headerTitleStyle: { ...Typography.title, color: Colors.brand.text },
@@ -109,7 +109,7 @@ export default function ScanResultScreen() {
           }}
         />
         <View style={styles.loadingContainer}>
-          <Text style={styles.statusText}>遺꾩꽍 寃곌낵瑜?遺덈윭?ㅻ뒗 以묒엯?덈떎.</Text>
+          <Text style={styles.statusText}>분석 결과를 불러오는 중입니다.</Text>
         </View>
       </>
     );
