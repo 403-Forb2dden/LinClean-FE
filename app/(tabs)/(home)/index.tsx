@@ -213,7 +213,7 @@ export default function HomeScreen() {
                 statistics,
                 statisticsStatus,
               );
-              const summary = getStatisticsSummary(item, statisticsStatus);
+              const summary = getStatisticsSummary(item);
 
               return (
                 <View
@@ -437,14 +437,6 @@ function getStatisticsCountLabel(
     : String(statistics[verdict]);
 }
 
-function getStatisticsSummary(item: SecurityStatusItem, status: StatisticsViewStatus) {
-  if (status === 'loading') {
-    return '집계 중';
-  }
-
-  if (status === 'error') {
-    return '확인 불가';
-  }
-
+function getStatisticsSummary(item: SecurityStatusItem) {
   return item.summary;
 }
