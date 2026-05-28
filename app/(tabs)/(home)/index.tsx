@@ -63,12 +63,12 @@ export default function HomeScreen() {
   const [titleToastVisible, setTitleToastVisible] = useState(false);
   const [statistics, setStatistics] = useState<VerdictStatisticsResponse>(EMPTY_STATISTICS);
   const [isStatisticsLoading, setIsStatisticsLoading] = useState(true);
-  const [statisticsErrorMessage, setStatisticsErrorMessage] = useState('');
+  const [hasStatisticsError, setHasStatisticsError] = useState(false);
   const lastToastParamRef = useRef<string | undefined>(undefined);
   const savedLinkToast = typeof savedLinkToastParam === 'string' ? savedLinkToastParam : undefined;
   const statisticsStatus = getStatisticsViewStatus(
     isStatisticsLoading,
-    statisticsErrorMessage,
+    hasStatisticsError,
   );
   const hasNoStatistics = SECURITY_STATUS_ITEMS.every(
     (item) => statistics[item.verdict] === 0,
@@ -92,7 +92,7 @@ export default function HomeScreen() {
 
     async function loadStatistics() {
       setIsStatisticsLoading(true);
-      setStatisticsErrorMessage('');
+      setHasStatisticsError(false);
 
       try {
         const response = await fetchVerdictStatistics({ signal: abortController.signal });
@@ -103,7 +103,7 @@ export default function HomeScreen() {
         }
 
         setStatistics(EMPTY_STATISTICS);
-        setStatisticsErrorMessage('불러오지 못했어요');
+        setHasStatisticsError(true);
       } finally {
         if (!abortController.signal.aborted) {
           setIsStatisticsLoading(false);
@@ -406,13 +406,13 @@ const styles = StyleSheet.create({
 
 function getStatisticsViewStatus(
   isLoading: boolean,
-  errorMessage: string,
+  hasError: boolean,
 ): StatisticsViewStatus {
   if (isLoading) {
     return 'loading';
   }
 
-  if (errorMessage) {
+  if (hasError) {
     return 'error';
   }
 
