@@ -31,7 +31,7 @@ type SecurityStatusItem = {
   summary: string;
 };
 
-type StatisticsViewStatus = 'loading' | 'error' | 'empty' | 'ready';
+type StatisticsViewStatus = 'loading' | 'error' | 'ready';
 
 const SECURITY_STATUS_ITEMS: SecurityStatusItem[] = [
   { verdict: 'safe', label: '안전', summary: '문제 없음' },
@@ -42,7 +42,6 @@ const SECURITY_STATUS_ITEMS: SecurityStatusItem[] = [
 const STATISTICS_STATUS_LABELS: Record<Exclude<StatisticsViewStatus, 'ready'>, string> = {
   loading: '조회 중',
   error: '불러오지 못했어요',
-  empty: '기록 없음',
 };
 
 const EMPTY_STATISTICS: VerdictStatisticsResponse = {
@@ -68,13 +67,13 @@ export default function HomeScreen() {
   const lastToastParamRef = useRef<string | undefined>(undefined);
   const savedLinkToast = typeof savedLinkToastParam === 'string' ? savedLinkToastParam : undefined;
   const statisticsStatus = getStatisticsViewStatus(
-    statistics,
     isStatisticsLoading,
     statisticsErrorMessage,
   );
-  const statisticsStatusLabel = statisticsStatus === 'ready'
-    ? ''
-    : STATISTICS_STATUS_LABELS[statisticsStatus];
+  const hasNoStatistics = SECURITY_STATUS_ITEMS.every(
+    (item) => statistics[item.verdict] === 0,
+  );
+  const statisticsStatusLabel = getStatisticsStatusLabel(statisticsStatus, hasNoStatistics);
 
   // 최근 저장한 링크 — createdAt 내림차순 상위 3개
   const recentLinks = links.slice(0, 3);
@@ -406,7 +405,6 @@ const styles = StyleSheet.create({
 });
 
 function getStatisticsViewStatus(
-  statistics: VerdictStatisticsResponse,
   isLoading: boolean,
   errorMessage: string,
 ): StatisticsViewStatus {
@@ -418,11 +416,15 @@ function getStatisticsViewStatus(
     return 'error';
   }
 
-  if (SECURITY_STATUS_ITEMS.every((item) => statistics[item.verdict] === 0)) {
-    return 'empty';
+  return 'ready';
+}
+
+function getStatisticsStatusLabel(status: StatisticsViewStatus, hasNoStatistics: boolean) {
+  if (status === 'ready') {
+    return hasNoStatistics ? '기록 없음' : '';
   }
 
-  return 'ready';
+  return STATISTICS_STATUS_LABELS[status];
 }
 
 function getStatisticsCountLabel(
@@ -442,10 +444,6 @@ function getStatisticsSummary(item: SecurityStatusItem, status: StatisticsViewSt
 
   if (status === 'error') {
     return '확인 불가';
-  }
-
-  if (status === 'empty') {
-    return '기록 없음';
   }
 
   return item.summary;
