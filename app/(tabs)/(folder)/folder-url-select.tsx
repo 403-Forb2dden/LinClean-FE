@@ -1,6 +1,5 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
-  Alert,
   FlatList,
   StyleSheet,
   Text,
@@ -9,42 +8,11 @@ import {
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 
 import { Button } from '@/components/ui/button';
-import { CardLink } from '@/components/ui/card-link';
-import { SelectionCircle } from '@/components/ui/selection-circle';
+import { SelectableLinkCard } from '@/components/ui/selectable-link-card';
 import { Colors, Typography } from '@/constants/theme';
 import { getFolderErrorMessage, useFolders } from '@/context/folders-context';
-import { useSavedLinks, type SavedLink } from '@/context/saved-links-context';
-
-// ─── Selectable card row ──────────────────────────────────────────────────────
-
-interface SelectableCardProps {
-  link: SavedLink;
-  selected: boolean;
-  onToggle: (id: number) => void;
-}
-
-function SelectableCard({ link, selected, onToggle }: SelectableCardProps) {
-  return (
-    <View style={styles.cardRow}>
-      <CardLink
-        verdict={link.verdict}
-        title={link.title}
-        originalUrl={link.originalUrl}
-        finalUrl={link.finalUrl}
-        bookmarked={link.isBookmarked}
-        icon={false}
-        onPress={() => onToggle(link.id)}
-      />
-      {/* 선택 시 카드 위에 어두운 오버레이 */}
-      {selected && (
-        <View style={styles.selectedOverlay} pointerEvents="none" />
-      )}
-      <View style={styles.checkOverlay} pointerEvents="none">
-        <SelectionCircle selected={selected} />
-      </View>
-    </View>
-  );
-}
+import { useSavedLinks } from '@/context/saved-links-context';
+import { showAlert } from '@/utils/guarded-alert';
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -56,6 +24,7 @@ export default function FolderUrlSelectScreen() {
   const { links: allLinks, refreshLinks } = useSavedLinks();
   const links = allLinks.filter((l) => l.categoryId === null);
   const name = (folderName ?? '새 폴더').trim();
+  const isCreatingRef = useRef(false);
 
   const toggleSelect = useCallback((id: number) => {
     setSelectedIds((prev) => {
@@ -70,15 +39,17 @@ export default function FolderUrlSelectScreen() {
   }, []);
 
   const handleCreate = async () => {
-    if (isCreating) return;
+    if (isCreatingRef.current) return;
+    isCreatingRef.current = true;
     setIsCreating(true);
     try {
       await addFolder(name, [...selectedIds]);
     } catch (error) {
-      Alert.alert(
+      showAlert(
         '폴더 생성 실패',
         getFolderErrorMessage(error, '폴더를 생성하지 못했습니다. 잠시 후 다시 시도해주세요.'),
       );
+      isCreatingRef.current = false;
       setIsCreating(false);
       return;
     }
@@ -87,8 +58,6 @@ export default function FolderUrlSelectScreen() {
       await refreshLinks();
     } catch {
       // Link refresh is best-effort after the folder has already been created.
-    } finally {
-      setIsCreating(false);
     }
 
     router.dismissAll();
@@ -96,6 +65,8 @@ export default function FolderUrlSelectScreen() {
       pathname: '/(tabs)/(folder)',
       params: { folderCreated: String(Date.now()) },
     });
+    isCreatingRef.current = false;
+    setIsCreating(false);
   };
 
   const selectedCount = selectedIds.size;
@@ -136,7 +107,7 @@ export default function FolderUrlSelectScreen() {
             data={links}
             keyExtractor={(item) => String(item.id)}
             renderItem={({ item }) => (
-              <SelectableCard
+              <SelectableLinkCard
                 link={item}
                 selected={selectedIds.has(item.id)}
                 onToggle={toggleSelect}
@@ -221,26 +192,6 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 8,
-  },
-
-  // Selectable card
-  cardRow: {
-    position: 'relative',
-    borderRadius: 22,
-    overflow: 'hidden',
-  },
-  selectedOverlay: {
-    position: 'absolute',
-    inset: 0,
-    borderRadius: 22,
-    backgroundColor: Colors.brand.overlaySelected,
-  },
-  checkOverlay: {
-    position: 'absolute',
-    right: 16,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
   },
 
   emptyState: {
