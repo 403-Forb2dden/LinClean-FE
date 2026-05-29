@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Keyboard,
   LayoutAnimation,
   Modal,
@@ -15,6 +14,7 @@ import {
   View,
   type KeyboardEvent,
 } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AddFolderButton } from '@/components/ui/add-folder-button';
@@ -26,6 +26,8 @@ import { Colors, Typography } from '@/constants/theme';
 import type { AnchorPosition } from '@/components/ui/folder-card';
 import { useSavedLinks } from '@/context/saved-links-context';
 import { getFolderErrorMessage, useFolders } from '@/context/folders-context';
+import { showAlert } from '@/utils/guarded-alert';
+import { useGuardedPress } from '@/utils/press-guard';
 
 type MenuState = {
   visible: boolean;
@@ -33,6 +35,11 @@ type MenuState = {
   folderId?: number;
 };
 
+const CONTENT_HORIZONTAL_PADDING = 24;
+const CANVAS_PADDING = 16;
+const FOLDER_GRID_GAP = 12;
+const DEFAULT_FOLDER_CARD_WIDTH = 144;
+const MIN_TWO_COLUMN_CARD_WIDTH = 120;
 const RENAME_MODAL_BOTTOM_GAP = 16;
 const RENAME_KEYBOARD_TOP_GAP = 8;
 
@@ -58,6 +65,7 @@ const syncKeyboardLayoutAnimation = (event: KeyboardEvent) => {
 export default function FolderScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const tabBarHeight = useBottomTabBarHeight();
   const { folderCreated: folderCreatedParam } = useLocalSearchParams<{
     folderCreated?: string | string[];
   }>();
@@ -85,7 +93,9 @@ export default function FolderScreen() {
   const [createToastVisible, setCreateToastVisible] = useState(false);
   const [deleteToastVisible, setDeleteToastVisible] = useState(false);
   const [renameToastVisible, setRenameToastVisible] = useState(false);
+  const [gridWidth, setGridWidth] = useState(0);
   const lastCreatedToastRef = useRef<string | undefined>(undefined);
+  const isMutatingRef = useRef(false);
   const renameInputRef = useRef<TextInput>(null);
   const renameFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const folderCreated = typeof folderCreatedParam === 'string' ? folderCreatedParam : undefined;
@@ -94,6 +104,27 @@ export default function FolderScreen() {
     () => rawFolders.map((folder) => ({ ...folder })),
     [rawFolders],
   );
+  const folderCardWidth = useMemo(() => {
+    const availableWidth = gridWidth;
+
+    if (availableWidth <= 0) {
+      return DEFAULT_FOLDER_CARD_WIDTH;
+    }
+
+    const defaultTwoColumnWidth = DEFAULT_FOLDER_CARD_WIDTH * 2 + FOLDER_GRID_GAP;
+
+    if (availableWidth >= defaultTwoColumnWidth) {
+      return DEFAULT_FOLDER_CARD_WIDTH;
+    }
+
+    const compactTwoColumnWidth = Math.floor((availableWidth - FOLDER_GRID_GAP) / 2);
+
+    if (compactTwoColumnWidth >= MIN_TWO_COLUMN_CARD_WIDTH) {
+      return compactTwoColumnWidth;
+    }
+
+    return availableWidth;
+  }, [gridWidth]);
 
   const handleMorePress = (folderId: number, anchor: AnchorPosition) => {
     setMenuState({ visible: true, anchor, folderId });
@@ -146,7 +177,8 @@ export default function FolderScreen() {
   const handleRenameConfirm = async () => {
     const trimmed = renameState.value.trim();
     const currentName = renameState.currentName.trim();
-    if (renameState.folderId == null || !trimmed || trimmed === currentName || isMutating) return;
+    if (renameState.folderId == null || !trimmed || trimmed === currentName || isMutatingRef.current) return;
+    isMutatingRef.current = true;
     setIsMutating(true);
     try {
       await renameFolder(renameState.folderId, trimmed);
@@ -157,20 +189,26 @@ export default function FolderScreen() {
       setRenameState({ visible: false, value: '', currentName: '' });
       setRenameToastVisible(true);
     } catch (error) {
-      Alert.alert(
+      showAlert(
         '폴더명 수정 실패',
         getFolderErrorMessage(error, '폴더 이름을 수정하지 못했습니다. 잠시 후 다시 시도해주세요.'),
       );
     } finally {
+      isMutatingRef.current = false;
       setIsMutating(false);
     }
   };
 
   const handleRenameCancel = () => {
+    if (isMutatingRef.current) {
+      return;
+    }
+
     if (renameFocusTimerRef.current) {
       clearTimeout(renameFocusTimerRef.current);
       renameFocusTimerRef.current = null;
     }
+
     setRenameState({ visible: false, value: '', currentName: '' });
   };
 
@@ -189,24 +227,26 @@ export default function FolderScreen() {
     if (menuState.folderId == null) return;
     const folderId = menuState.folderId;
 
-    Alert.alert('폴더 삭제', '폴더를 삭제할까요? 폴더 안의 링크는 미분류 상태로 이동합니다.', [
+    showAlert('폴더 삭제', '폴더를 삭제할까요? 폴더 안의 링크는 미분류 상태로 이동합니다.', [
       { text: '취소', style: 'cancel' },
       {
         text: '삭제',
         style: 'destructive',
         onPress: async () => {
-          if (isMutating) return;
+          if (isMutatingRef.current) return;
+          isMutatingRef.current = true;
           setIsMutating(true);
           try {
             await deleteFolder(folderId);
             await refreshLinks();
             setDeleteToastVisible(true);
           } catch (error) {
-            Alert.alert(
+            showAlert(
               '폴더 삭제 실패',
               getFolderErrorMessage(error, '폴더를 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.'),
             );
           } finally {
+            isMutatingRef.current = false;
             setIsMutating(false);
           }
         },
@@ -223,6 +263,12 @@ export default function FolderScreen() {
     trimmedRenameValue.length === 0 ||
     trimmedRenameValue === renameState.currentName.trim() ||
     isMutating;
+  const guardedRenameCancel = useGuardedPress(handleRenameCancel, { disabled: isMutating, lockMs: 250 });
+  const guardedRenameConfirm = useGuardedPress(handleRenameConfirm, { disabled: renameSubmitDisabled });
+  const guardedClearRename = useGuardedPress(
+    () => setRenameState((s) => ({ ...s, value: '' })),
+    { disabled: isMutating, lockMs: 250 },
+  );
   const renameRestingBottomInset = Math.max(insets.bottom, RENAME_MODAL_BOTTOM_GAP);
   const renameModalBottomInset = renameKeyboardInset > 0
     ? renameKeyboardInset + RENAME_KEYBOARD_TOP_GAP
@@ -232,7 +278,7 @@ export default function FolderScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + 24 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* 상단 헤더 */}
@@ -259,12 +305,16 @@ export default function FolderScreen() {
               <ActivityIndicator color={Colors.brand.primary} />
             </View>
           ) : folders.length > 0 ? (
-            <View style={styles.grid}>
+            <View
+              style={styles.grid}
+              onLayout={(event) => setGridWidth(event.nativeEvent.layout.width)}
+            >
               {folders.map((folder) => (
                 <FolderCard
                   key={folder.id}
                   folderName={folder.name}
                   urlCount={folder.linkCount}
+                  width={folderCardWidth}
                   onPress={() => router.push({ pathname: '/(tabs)/(folder)/[id]' as any, params: { id: folder.id } })}
                   onMorePress={(anchor) => handleMorePress(folder.id, anchor)}
                 />
@@ -316,7 +366,7 @@ export default function FolderScreen() {
         visible={renameState.visible}
         transparent
         animationType="fade"
-        onRequestClose={handleRenameCancel}
+        onRequestClose={guardedRenameCancel}
         onShow={handleRenameModalShow}
       >
         <View
@@ -325,7 +375,7 @@ export default function FolderScreen() {
             { paddingBottom: renameModalBottomInset },
           ]}
         >
-          <Pressable style={renameStyles.backdrop} onPress={handleRenameCancel} />
+          <Pressable style={renameStyles.backdrop} onPress={guardedRenameCancel} />
           <View style={renameStyles.sheet}>
             <ScrollView
               keyboardShouldPersistTaps="handled"
@@ -347,7 +397,7 @@ export default function FolderScreen() {
                 />
                 {renameState.value.length > 0 && (
                   <TouchableOpacity
-                    onPress={() => setRenameState((s) => ({ ...s, value: '' }))}
+                    onPress={guardedClearRename}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     style={renameStyles.clearButton}
                   >
@@ -356,15 +406,12 @@ export default function FolderScreen() {
                 )}
               </View>
               <View style={renameStyles.actions}>
-                <TouchableOpacity
-                  style={renameStyles.cancelBtn}
-                  onPress={handleRenameCancel}
-                >
+                <TouchableOpacity style={renameStyles.cancelBtn} onPress={guardedRenameCancel}>
                   <Text style={renameStyles.cancelText}>취소</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[renameStyles.confirmBtn, renameSubmitDisabled && renameStyles.confirmBtnDisabled]}
-                  onPress={handleRenameConfirm}
+                  onPress={guardedRenameConfirm}
                   disabled={renameSubmitDisabled}
                 >
                   <Text style={[renameStyles.confirmText, renameSubmitDisabled && renameStyles.confirmTextDisabled]}>
@@ -389,7 +436,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    paddingHorizontal: 24,
+    paddingHorizontal: CONTENT_HORIZONTAL_PADDING,
     paddingBottom: 32,
     gap: 20,
   },
@@ -412,13 +459,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.brand.line,
-    padding: 16,
+    padding: CANVAS_PADDING,
     gap: 16,
   },
   grid: {
+    width: '100%',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: FOLDER_GRID_GAP,
   },
   errorBox: {
     borderRadius: 12,
