@@ -31,6 +31,7 @@ export default function ScanningScreen() {
   const [retryKey, setRetryKey] = useState(0);
   const getTokenRef = useRef(getToken);
   const currentAbortControllerRef = useRef<AbortController | null>(null);
+  const hasNavigatedRef = useRef(false);
   const isShortScreen = windowHeight <= SHORT_SCREEN_HEIGHT;
   const isVeryShortScreen = windowHeight <= VERY_SHORT_SCREEN_HEIGHT;
   const animationSize = isVeryShortScreen
@@ -68,6 +69,7 @@ export default function ScanningScreen() {
     };
 
     currentAbortControllerRef.current = abortController;
+    hasNavigatedRef.current = false;
 
     if (!isLoaded) {
       return () => {
@@ -111,6 +113,7 @@ export default function ScanningScreen() {
       canNavigate: () => isActive && !didTimeout && !hasNavigated,
       onNavigate: () => {
         hasNavigated = true;
+        hasNavigatedRef.current = true;
         clearScreenTimeout();
       },
     })
@@ -151,6 +154,10 @@ export default function ScanningScreen() {
     }
 
     const animationTimeoutId = setTimeout(() => {
+      if (hasNavigatedRef.current) {
+        return;
+      }
+
       currentAbortControllerRef.current?.abort();
       setErrorMessage(getAnalysisErrorMessage(new Error('TIMEOUT')));
     }, SCAN_SCREEN_TIMEOUT_MS);
