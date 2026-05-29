@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,6 +18,7 @@ import { Colors, Typography } from '@/constants/theme';
 import { useFolders } from '@/context/folders-context';
 import { getSavedLinkErrorMessage, useSavedLinks, type SavedLink } from '@/context/saved-links-context';
 import type { AnchorPosition } from '@/components/ui/folder-card';
+import { showAlert } from '@/utils/guarded-alert';
 
 export default function HomeScreen() {
   const { savedLinkToast: savedLinkToastParam } = useLocalSearchParams<{
@@ -32,6 +32,7 @@ export default function HomeScreen() {
   const [deleteToastVisible, setDeleteToastVisible] = useState(false);
   const [titleToastVisible, setTitleToastVisible] = useState(false);
   const lastToastParamRef = useRef<string | undefined>(undefined);
+  const deletingLinkIdsRef = useRef<Set<number>>(new Set());
   const savedLinkToast = typeof savedLinkToastParam === 'string' ? savedLinkToastParam : undefined;
 
   // 최근 저장한 링크 — createdAt 내림차순 상위 3개
@@ -57,7 +58,7 @@ export default function HomeScreen() {
       try {
         await toggleBookmark(id);
       } catch (error) {
-        Alert.alert(
+        showAlert(
           '북마크 변경 실패',
           getSavedLinkErrorMessage(error, '북마크 상태를 변경하지 못했습니다. 잠시 후 다시 시도해주세요.'),
         );
@@ -68,21 +69,33 @@ export default function HomeScreen() {
 
   const handleDelete = useCallback(
     (id: number) => {
-      Alert.alert('링크 삭제', '저장한 링크를 삭제할까요?', [
+      if (deletingLinkIdsRef.current.has(id)) {
+        return;
+      }
+
+      showAlert('링크 삭제', '저장한 링크를 삭제할까요?', [
         { text: '취소', style: 'cancel' },
         {
           text: '삭제',
           style: 'destructive',
           onPress: async () => {
+            if (deletingLinkIdsRef.current.has(id)) {
+              return;
+            }
+
+            deletingLinkIdsRef.current.add(id);
+
             try {
               await deleteLink(id);
               await refreshFolders();
               setDeleteToastVisible(true);
             } catch (error) {
-              Alert.alert(
+              showAlert(
                 '삭제 실패',
                 getSavedLinkErrorMessage(error, '링크를 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.'),
               );
+            } finally {
+              deletingLinkIdsRef.current.delete(id);
             }
           },
         },

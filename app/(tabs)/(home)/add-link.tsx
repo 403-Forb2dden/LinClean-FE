@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -12,6 +13,7 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 
 import { ScanButton } from '@/components/ui/scan-button';
 import { Colors, Typography } from '@/constants/theme';
+import { useGuardedPress } from '@/utils/press-guard';
 import { normalizeHttpUrlInput } from '@/utils/shared-url';
 
 function getSharedUrlParam(value: string | string[] | undefined): string {
@@ -27,6 +29,15 @@ export default function AddLinkScreen() {
   const initialSharedUrl = getSharedUrlParam(sharedUrl);
   const [url, setUrl] = useState(initialSharedUrl);
   const [error, setError] = useState('');
+  const [isNavigating, setIsNavigating] = useState(false);
+  const isNavigatingRef = useRef(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      isNavigatingRef.current = false;
+      setIsNavigating(false);
+    }, []),
+  );
 
   useEffect(() => {
     const nextSharedUrl = getSharedUrlParam(sharedUrl);
@@ -40,6 +51,10 @@ export default function AddLinkScreen() {
   }, [sharedUrl]);
 
   const handleScan = () => {
+    if (isNavigatingRef.current) {
+      return;
+    }
+
     const trimmed = url.trim();
 
     if (!trimmed) {
@@ -56,6 +71,8 @@ export default function AddLinkScreen() {
     }
 
     setError('');
+    isNavigatingRef.current = true;
+    setIsNavigating(true);
     router.push({ pathname: '/(tabs)/(home)/scanning', params: { url: normalizedUrl } });
   };
 
@@ -65,7 +82,11 @@ export default function AddLinkScreen() {
   };
 
   const hasError = error.length > 0;
-  const scanDisabled = !url.trim();
+  const scanDisabled = !url.trim() || isNavigating;
+  const guardedClearUrl = useGuardedPress(() => {
+    setUrl('');
+    setError('');
+  }, { lockMs: 250 });
 
   return (
     <>
@@ -116,7 +137,7 @@ export default function AddLinkScreen() {
                 />
                 {url.length > 0 && (
                   <TouchableOpacity
-                    onPress={() => { setUrl(''); setError(''); }}
+                    onPress={guardedClearUrl}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     style={styles.clearButton}
                   >

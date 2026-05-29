@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Typography } from '@/constants/theme';
+import { useGuardedPress } from '@/utils/press-guard';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,6 +33,8 @@ interface DropdownProps {
 }
 
 function Dropdown({ items, selectedValue, onSelect }: DropdownProps) {
+  const guardedOnSelect = useGuardedPress(onSelect, { lockMs: 250 });
+
   return (
     <View style={dropdownStyles.container}>
       {items.map((item, index) => {
@@ -41,7 +44,7 @@ function Dropdown({ items, selectedValue, onSelect }: DropdownProps) {
         return (
           <View key={item.value}>
             <Pressable
-              onPress={() => onSelect(item.value)}
+              onPress={() => guardedOnSelect?.(item.value)}
               style={({ pressed }) => [
                 dropdownStyles.item,
                 isSelected && dropdownStyles.itemSelected,
@@ -139,10 +142,12 @@ export function FilterChip({
     onSelect?.(value);
   }
 
+  const guardedHandlePress = useGuardedPress(handlePress, { disabled, lockMs: 250 });
+
   return (
     <View style={chipStyles.wrapper}>
       <Pressable
-        onPress={handlePress}
+        onPress={guardedHandlePress}
         style={({ pressed }) => [
           chipStyles.chip,
           disabled && chipStyles.chipDisabled,

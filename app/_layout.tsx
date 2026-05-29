@@ -5,8 +5,10 @@ import { Stack } from 'expo-router';
 import { ShareIntentProvider } from 'expo-share-intent';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
+import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { PressBlocker } from '@/components/ui/press-blocker';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
@@ -27,7 +29,7 @@ export default function RootLayout() {
   return (
     <ShareIntentProvider options={{ scheme: 'linclean', resetOnBackground: false }}>
       <ClerkProvider publishableKey={clerkPublishableKey} tokenCache={tokenCache}>
-        <GestureHandlerRootView style={{ flex: 1 }}>
+        <GestureHandlerRootView style={styles.root}>
           <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
             <Stack>
               <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -38,8 +40,15 @@ export default function RootLayout() {
             </Stack>
             <StatusBar style="auto" />
           </ThemeProvider>
+          <PressBlocker />
         </GestureHandlerRootView>
       </ClerkProvider>
     </ShareIntentProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+});
