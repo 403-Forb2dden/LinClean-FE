@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useAuth } from '@clerk/expo';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   KeyboardAvoidingView,
@@ -12,6 +13,8 @@ import {
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 
+import { ApiError } from '@/api/api-client';
+import { checkSavedLinkUrl } from '@/api/saved-links';
 import { ScanButton } from '@/components/ui/scan-button';
 import { Colors, Typography } from '@/constants/theme';
 import { useGuardedPress } from '@/utils/press-guard';
@@ -29,6 +32,7 @@ function getSharedUrlParam(value: string | string[] | undefined): string {
 }
 
 export default function AddLinkScreen() {
+  const { getToken, isLoaded, isSignedIn } = useAuth();
   const { sharedUrl } = useLocalSearchParams<{ sharedUrl?: string }>();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const initialSharedUrl = getSharedUrlParam(sharedUrl);
@@ -37,6 +41,11 @@ export default function AddLinkScreen() {
   const isCompact = windowWidth < COMPACT_WIDTH || windowHeight <= SHORT_SCREEN_HEIGHT;
   const [isNavigating, setIsNavigating] = useState(false);
   const isNavigatingRef = useRef(false);
+  const getTokenRef = useRef(getToken);
+
+  useEffect(() => {
+    getTokenRef.current = getToken;
+  }, [getToken]);
 
   useFocusEffect(
     useCallback(() => {
@@ -56,7 +65,7 @@ export default function AddLinkScreen() {
     setError('');
   }, [sharedUrl]);
 
-  const handleScan = () => {
+  const handleScan = async () => {
     if (isNavigatingRef.current) {
       return;
     }
@@ -76,10 +85,36 @@ export default function AddLinkScreen() {
       return;
     }
 
+    if (!isLoaded) {
+      setError('로그인 상태를 확인하고 있습니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+
+    if (!isSignedIn) {
+      setError('로그인 상태를 확인할 수 없습니다. 다시 로그인한 뒤 시도해주세요.');
+      return;
+    }
+
     setError('');
     isNavigatingRef.current = true;
     setIsNavigating(true);
-    router.push({ pathname: '/(tabs)/(home)/scanning', params: { url: normalizedUrl } });
+
+    try {
+      const response = await checkSavedLinkUrl(() => getTokenRef.current(), normalizedUrl);
+
+      if (response.exists) {
+        setError('이미 저장된 링크입니다.');
+        isNavigatingRef.current = false;
+        setIsNavigating(false);
+        return;
+      }
+
+      router.push({ pathname: '/(tabs)/(home)/scanning', params: { url: normalizedUrl } });
+    } catch (error) {
+      setError(getSavedLinkUrlCheckErrorMessage(error));
+      isNavigatingRef.current = false;
+      setIsNavigating(false);
+    }
   };
 
   const handleChangeUrl = (value: string) => {
@@ -88,7 +123,7 @@ export default function AddLinkScreen() {
   };
 
   const hasError = error.length > 0;
-  const scanDisabled = !url.trim() || isNavigating;
+  const scanDisabled = !url.trim() || isNavigating || !isLoaded;
   const guardedClearUrl = useGuardedPress(() => {
     setUrl('');
     setError('');
@@ -141,7 +176,9 @@ export default function AddLinkScreen() {
                   autoCorrect={false}
                   keyboardType="url"
                   returnKeyType="search"
-                  onSubmitEditing={handleScan}
+                  onSubmitEditing={() => {
+                    void handleScan();
+                  }}
                 />
                 {url.length > 0 && (
                   <TouchableOpacity
@@ -153,7 +190,12 @@ export default function AddLinkScreen() {
                   </TouchableOpacity>
                 )}
               </View>
-              <ScanButton onPress={handleScan} disabled={scanDisabled} />
+              <ScanButton
+                onPress={() => {
+                  void handleScan();
+                }}
+                disabled={scanDisabled}
+              />
             </View>
 
             {/* 에러 메시지 */}
@@ -171,6 +213,24 @@ export default function AddLinkScreen() {
       </View>
     </>
   );
+}
+
+function getSavedLinkUrlCheckErrorMessage(error: unknown) {
+  if (error instanceof ApiError) {
+    if (error.status === 401 || error.status === 403) {
+      return '로그인 상태를 확인할 수 없습니다. 다시 로그인한 뒤 시도해주세요.';
+    }
+
+    return error.message || '저장된 링크 확인에 실패했습니다. 잠시 후 다시 시도해주세요.';
+  }
+
+  if (error instanceof Error) {
+    if (error.message === 'Missing Clerk session token') {
+      return '로그인 상태를 확인할 수 없습니다. 다시 로그인한 뒤 시도해주세요.';
+    }
+  }
+
+  return '저장된 링크 확인에 실패했습니다. 잠시 후 다시 시도해주세요.';
 }
 
 const styles = StyleSheet.create({

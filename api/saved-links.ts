@@ -54,6 +54,10 @@ export type SavedLinkTitleUpdateResponse = {
   title: string;
 };
 
+export type SavedLinkUrlCheckResponse = {
+  exists: boolean;
+};
+
 type SavedLinkRequestOptions = Pick<ApiRequestOptions, 'signal'>;
 
 export function createSavedLink(
@@ -76,6 +80,18 @@ export function fetchSavedLinks(
   return authenticatedApiRequest<SavedLinkListResponse>(
     getToken,
     `/api/v1/saved-links${buildSavedLinkQuery(query)}`,
+    options,
+  );
+}
+
+export function checkSavedLinkUrl(
+  getToken: ClerkTokenGetter,
+  url: string,
+  options: SavedLinkRequestOptions = {},
+) {
+  return authenticatedApiRequest<SavedLinkUrlCheckResponse>(
+    getToken,
+    `/api/v1/saved-links/check?url=${encodeURIComponent(url)}`,
     options,
   );
 }
