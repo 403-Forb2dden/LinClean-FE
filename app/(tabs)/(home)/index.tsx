@@ -7,7 +7,6 @@ import {
   View,
 } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { AppIcon } from '@/components/ui/app-icon';
@@ -96,38 +95,36 @@ export default function HomeScreen() {
     setSaveToastVisible(true);
   }, [savedLinkToast]);
 
-  useFocusEffect(
-    useCallback(() => {
-      const abortController = new AbortController();
+  useEffect(() => {
+    const abortController = new AbortController();
 
-      async function loadStatistics() {
-        setIsStatisticsLoading(true);
-        setHasStatisticsError(false);
+    async function loadStatistics() {
+      setIsStatisticsLoading(true);
+      setHasStatisticsError(false);
 
-        try {
-          const response = await fetchVerdictStatistics({ signal: abortController.signal });
-          setStatistics(response);
-        } catch {
-          if (abortController.signal.aborted) {
-            return;
-          }
+      try {
+        const response = await fetchVerdictStatistics({ signal: abortController.signal });
+        setStatistics(response);
+      } catch {
+        if (abortController.signal.aborted) {
+          return;
+        }
 
-          setStatistics(EMPTY_STATISTICS);
-          setHasStatisticsError(true);
-        } finally {
-          if (!abortController.signal.aborted) {
-            setIsStatisticsLoading(false);
-          }
+        setStatistics(EMPTY_STATISTICS);
+        setHasStatisticsError(true);
+      } finally {
+        if (!abortController.signal.aborted) {
+          setIsStatisticsLoading(false);
         }
       }
+    }
 
-      void loadStatistics();
+    void loadStatistics();
 
-      return () => {
-        abortController.abort();
-      };
-    }, []),
-  );
+    return () => {
+      abortController.abort();
+    };
+  }, []);
 
   const handleMore = (id: number, anchor: AnchorPosition) => {
     setMenuState({ visible: true, anchor, linkId: id });
