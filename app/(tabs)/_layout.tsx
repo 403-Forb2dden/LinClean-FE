@@ -20,12 +20,36 @@ const TAB_TO_HREF: Partial<Record<TabVariant, string>> = {
   folder: '/(tabs)/(folder)',
 };
 
+type NestedRoute = {
+  name?: string;
+  state?: {
+    index?: number;
+    routes?: NestedRoute[];
+  };
+};
+
+function getActiveNestedRouteName(route?: NestedRoute): string | undefined {
+  const nestedState = route?.state;
+
+  if (!nestedState?.routes?.length) {
+    return route?.name;
+  }
+
+  const nestedIndex = nestedState.index ?? 0;
+  return getActiveNestedRouteName(nestedState.routes[nestedIndex]);
+}
+
 function CustomTabBar({ state }: BottomTabBarProps) {
   const activeRoute = state.routes[state.index];
   const activeRouteName = activeRoute?.name ?? '(home)';
   const activeTab = ROUTE_TO_TAB[activeRouteName] ?? 'home';
+  const isScanningRoute = getActiveNestedRouteName(activeRoute as NestedRoute) === 'scanning';
 
   function handleTabPress(tab: TabVariant) {
+    if (isScanningRoute) {
+      return;
+    }
+
     const href = TAB_TO_HREF[tab];
     if (href) {
       router.navigate(href as any);
@@ -36,6 +60,9 @@ function CustomTabBar({ state }: BottomTabBarProps) {
     <BottomTabBar
       activeTab={activeTab}
       onTabPress={handleTabPress}
+      home={{ disabled: isScanningRoute }}
+      addLink={{ disabled: isScanningRoute }}
+      folder={{ disabled: isScanningRoute }}
     />
   );
 }

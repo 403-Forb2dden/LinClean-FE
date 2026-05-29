@@ -2,12 +2,13 @@ import { useAuth } from '@clerk/expo';
 import LottieView from 'lottie-react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { BackHandler, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 
 import { fetchAnalysis, requestAnalysis, type AnalysisResponse, type AnalysisVerdict } from '@/api/analyses';
 import { ApiError } from '@/api/api-client';
 import { Colors, Typography } from '@/constants/theme';
+import { AppIcon } from '@/components/ui/app-icon';
 import { useGuardedPress } from '@/utils/press-guard';
 
 const POLLING_INTERVAL_MS = 2_000;
@@ -104,8 +105,21 @@ export default function ScanningScreen() {
   }, [isLoaded, isSignedIn, retryKey, url]);
 
   const hasError = errorMessage.length > 0;
+  const isScanning = !hasError;
   const guardedRetry = useGuardedPress(() => setRetryKey((key) => key + 1));
   const guardedBack = useGuardedPress(() => router.back());
+
+  useEffect(() => {
+    if (!isScanning) {
+      return undefined;
+    }
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => true);
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isScanning]);
 
   return (
     <>
@@ -118,6 +132,17 @@ export default function ScanningScreen() {
           headerTitleStyle: { ...Typography.title, color: Colors.brand.text },
           headerTintColor: Colors.brand.text,
           headerShadowVisible: false,
+          headerBackVisible: !isScanning,
+          gestureEnabled: !isScanning,
+          headerLeft: isScanning
+            ? () => (
+                <AppIcon
+                  name="back"
+                  disabled
+                  style={styles.headerBackButton}
+                />
+              )
+            : undefined,
         }}
       />
       <View
@@ -329,6 +354,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingTop: 40,
+  },
+  headerBackButton: {
+    width: 44,
+    height: 44,
   },
   containerCompact: {
     paddingTop: 20,
