@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Typography } from '@/constants/theme';
+import { useGuardedPress } from '@/utils/press-guard';
 import { AppIcon } from './app-icon';
 
 const DEFAULT_CARD_WIDTH = 144;
@@ -32,17 +33,19 @@ export function FolderCard({
 }: FolderCardProps) {
   const moreRef = useRef<View>(null);
   const cardWidth = width ?? DEFAULT_CARD_WIDTH;
+  const guardedOnPress = useGuardedPress(onPress, { disabled });
+  const guardedOnMorePress = useGuardedPress(onMorePress, { disabled });
 
   const handleMorePress = () => {
     moreRef.current?.measure((_fx, _fy, measuredWidth, measuredHeight, px, py) => {
-      onMorePress?.({ x: px, y: py, width: measuredWidth, height: measuredHeight });
+      guardedOnMorePress?.({ x: px, y: py, width: measuredWidth, height: measuredHeight });
     });
   };
 
   return (
     <Pressable
       style={({ pressed }) => [styles.root, { width: cardWidth }, pressed && !disabled && styles.pressed]}
-      onPress={disabled ? undefined : onPress}
+      onPress={guardedOnPress}
       accessibilityRole="button"
       accessibilityLabel={`${folderName} 폴더, ${urlCount}개`}
       accessibilityState={{ disabled }}

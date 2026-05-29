@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { ResultStatusIcon } from '@/components/ui/result-status-icon';
 import { ScanResultReason } from '@/components/ui/scan-result-reason';
@@ -16,6 +16,8 @@ import {
   getAnalysisResultPath,
   getRouteParam,
 } from '@/utils/analysis-result-display';
+import { showAlert } from '@/utils/guarded-alert';
+import { useGuardedPress } from '@/utils/press-guard';
 
 const COMPACT_RESULT_HEIGHT = 760;
 const VERY_COMPACT_RESULT_HEIGHT = 700;
@@ -36,6 +38,7 @@ export default function ScanResultScreen() {
   const reason = getAnalysisReasonText(analysis, getMockScanResultReason('safe'));
   const [saveModalVisible, setSaveModalVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const isSavingRef = useRef(false);
   const shouldRedirectToVerdict = Boolean(analysis?.verdict && analysis.verdict !== 'safe');
   const isVerifyingAnalysis = Boolean(analysisId) && !errorMessage && (!analysis?.verdict || isLoading);
   const saveAnalysisId = analysis?.analysisId ?? analysisId;
@@ -64,10 +67,11 @@ export default function ScanResultScreen() {
   }, [analysis, url]);
 
   const handleSave = async (title: string) => {
-    if (!canSave || !saveAnalysisId) {
+    if (!canSave || !saveAnalysisId || isSavingRef.current) {
       return;
     }
 
+    isSavingRef.current = true;
     setIsSaving(true);
 
     try {
@@ -83,11 +87,12 @@ export default function ScanResultScreen() {
         params: { savedLinkToast: String(Date.now()) },
       });
     } catch (error) {
-      Alert.alert(
+      showAlert(
         '저장 실패',
         getSavedLinkErrorMessage(error, '링크를 저장하지 못했습니다. 잠시 후 다시 시도해주세요.'),
       );
     } finally {
+      isSavingRef.current = false;
       setIsSaving(false);
     }
   };
@@ -101,6 +106,10 @@ export default function ScanResultScreen() {
       }
     }
   };
+  const guardedOpenSaveModal = useGuardedPress(() => setSaveModalVisible(true), {
+    disabled: !canSave || saveModalVisible,
+  });
+  const guardedOpenUrl = useGuardedPress(handleOpenUrl, { disabled: !finalUrl });
 
   if (isVerifyingAnalysis || shouldRedirectToVerdict) {
     return (
@@ -174,18 +183,18 @@ export default function ScanResultScreen() {
             style={[
               styles.primaryButton,
               isVeryCompactResult && styles.buttonVeryCompact,
-              !canSave && styles.disabledButton,
+              (!canSave || saveModalVisible) && styles.disabledButton,
             ]}
-            onPress={() => setSaveModalVisible(true)}
+            onPress={guardedOpenSaveModal}
             activeOpacity={0.8}
-            disabled={!canSave}
+            disabled={!canSave || saveModalVisible}
           >
             <Text style={styles.primaryButtonText}>저장</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.secondaryButton, isVeryCompactResult && styles.buttonVeryCompact]}
-            onPress={handleOpenUrl}
+            onPress={guardedOpenUrl}
             activeOpacity={0.8}
           >
             <Text style={styles.secondaryButtonText}>즉시 URL 접속</Text>

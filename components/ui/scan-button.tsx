@@ -1,5 +1,6 @@
 import { StyleSheet, Text, TouchableOpacity, type StyleProp, type ViewStyle } from 'react-native';
 import { Colors, Typography } from '@/constants/theme';
+import { useGuardedPress } from '@/utils/press-guard';
 import { IconSymbol } from './icon-symbol';
 
 interface ScanButtonProps {
@@ -10,10 +11,11 @@ interface ScanButtonProps {
 
 export function ScanButton({ onPress, disabled = false, style }: ScanButtonProps) {
   const color = disabled ? Colors.brand.textHint : Colors.brand.primary;
+  const guardedOnPress = useGuardedPress(onPress, { disabled });
 
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={guardedOnPress}
       disabled={disabled}
       activeOpacity={0.7}
       style={[styles.container, disabled && styles.containerDisabled, style]}

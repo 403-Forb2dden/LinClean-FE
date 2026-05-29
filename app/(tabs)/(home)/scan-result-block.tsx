@@ -13,6 +13,7 @@ import {
   getAnalysisResultPath,
   getRouteParam,
 } from '@/utils/analysis-result-display';
+import { useGuardedPress } from '@/utils/press-guard';
 
 const COMPACT_RESULT_HEIGHT = 760;
 const VERY_COMPACT_RESULT_HEIGHT = 700;
@@ -33,6 +34,7 @@ export default function ScanResultBlockScreen() {
   const isVerifyingAnalysis = Boolean(analysisId) && !errorMessage && (!analysis?.verdict || isLoading);
   const isCompactResult = windowHeight <= COMPACT_RESULT_HEIGHT;
   const isVeryCompactResult = windowHeight <= VERY_COMPACT_RESULT_HEIGHT;
+  const guardedDismissAll = useGuardedPress(() => router.dismissAll());
 
   useEffect(() => {
     if (!analysis?.verdict || analysis.verdict === 'danger') {
@@ -119,7 +121,7 @@ export default function ScanResultBlockScreen() {
         <View style={styles.buttonArea}>
           <TouchableOpacity
             style={[styles.confirmButton, isVeryCompactResult && styles.buttonVeryCompact]}
-            onPress={() => router.dismissAll()}
+            onPress={guardedDismissAll}
             activeOpacity={0.8}
           >
             <Text style={styles.confirmButtonText}>확인</Text>

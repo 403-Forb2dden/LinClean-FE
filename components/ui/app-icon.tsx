@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 
 import { Colors, Typography } from '@/constants/theme';
+import { useGuardedPress } from '@/utils/press-guard';
 import { IconSymbol, type IconSymbolName } from './icon-symbol';
 
 export type AppIconName =
@@ -58,10 +59,11 @@ export function AppIcon({
   style,
 }: AppIconProps) {
   const iconColor = disabled ? Colors.brand.textHint : Colors.brand.text;
+  const guardedOnPress = useGuardedPress(onPress, { disabled });
 
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={guardedOnPress}
       disabled={disabled}
       activeOpacity={0.7}
       style={[styles.container, style]}

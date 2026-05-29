@@ -1,6 +1,5 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
-  Alert,
   FlatList,
   StyleSheet,
   Text,
@@ -14,6 +13,7 @@ import { SelectionCircle } from '@/components/ui/selection-circle';
 import { Colors, Typography } from '@/constants/theme';
 import { getFolderErrorMessage, useFolders } from '@/context/folders-context';
 import { useSavedLinks, type SavedLink } from '@/context/saved-links-context';
+import { showAlert } from '@/utils/guarded-alert';
 
 // ─── Selectable card row ──────────────────────────────────────────────────────
 
@@ -60,6 +60,7 @@ export default function FolderAddUrlScreen() {
 
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [isAdding, setIsAdding] = useState(false);
+  const isAddingRef = useRef(false);
 
   const toggleSelect = useCallback((id: number) => {
     setSelectedIds((prev) => {
@@ -74,7 +75,8 @@ export default function FolderAddUrlScreen() {
   }, []);
 
   const handleAdd = async () => {
-    if (isAdding || selectedIds.size === 0) return;
+    if (isAddingRef.current || selectedIds.size === 0) return;
+    isAddingRef.current = true;
     setIsAdding(true);
     try {
       await assignCategory([...selectedIds], Number(folderId));
@@ -84,11 +86,12 @@ export default function FolderAddUrlScreen() {
         params: { id: folderId, urlAdded: '1' },
       });
     } catch (error) {
-      Alert.alert(
+      showAlert(
         'URL 추가 실패',
         getFolderErrorMessage(error, '선택한 URL을 폴더에 추가하지 못했습니다. 잠시 후 다시 시도해주세요.'),
       );
     } finally {
+      isAddingRef.current = false;
       setIsAdding(false);
     }
   };

@@ -8,6 +8,7 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { fetchAnalysis, requestAnalysis, type AnalysisResponse, type AnalysisVerdict } from '@/api/analyses';
 import { ApiError } from '@/api/api-client';
 import { Colors, Typography } from '@/constants/theme';
+import { useGuardedPress } from '@/utils/press-guard';
 
 const POLLING_INTERVAL_MS = 2_000;
 const MAX_POLLING_MS = 30_000;
@@ -103,6 +104,8 @@ export default function ScanningScreen() {
   }, [isLoaded, isSignedIn, retryKey, url]);
 
   const hasError = errorMessage.length > 0;
+  const guardedRetry = useGuardedPress(() => setRetryKey((key) => key + 1));
+  const guardedBack = useGuardedPress(() => router.back());
 
   return (
     <>
@@ -167,14 +170,14 @@ export default function ScanningScreen() {
           <View style={[styles.buttonArea, isShortScreen && styles.buttonAreaCompact]}>
             <TouchableOpacity
               style={[styles.primaryButton, isVeryShortScreen && styles.buttonCompact]}
-              onPress={() => setRetryKey((key) => key + 1)}
+              onPress={guardedRetry}
               activeOpacity={0.8}
             >
               <Text style={styles.primaryButtonText}>다시 검사</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.secondaryButton, isVeryShortScreen && styles.buttonCompact]}
-              onPress={() => router.back()}
+              onPress={guardedBack}
               activeOpacity={0.8}
             >
               <Text style={styles.secondaryButtonText}>돌아가기</Text>

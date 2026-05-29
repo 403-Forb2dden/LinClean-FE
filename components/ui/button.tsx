@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 
 import { Colors, Typography } from '@/constants/theme';
+import { useGuardedPress } from '@/utils/press-guard';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 export type ButtonSize = 'large' | 'medium' | 'small';
@@ -34,6 +35,7 @@ export function Button({
   ...rest
 }: ButtonProps) {
   const isDisabled = disabled || loading;
+  const guardedOnPress = useGuardedPress(onPress, { disabled: isDisabled });
 
   return (
     <TouchableOpacity
@@ -43,7 +45,7 @@ export function Button({
         styles[`variant_${variant}` as keyof typeof styles],
         isDisabled && styles[`variant_${variant}_disabled` as keyof typeof styles],
       ]}
-      onPress={onPress}
+      onPress={guardedOnPress}
       disabled={isDisabled}
       activeOpacity={0.75}
       {...rest}
