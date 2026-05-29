@@ -5,13 +5,14 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useShareIntentContext } from 'expo-share-intent';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ApiError } from '@/api/api-client';
 import { SocialLoginButton } from '@/components/ui/social-login-button';
 import { Colors, Typography } from '@/constants/theme';
 import { syncAuthenticatedMember } from '@/services/auth-api';
+import { showAlert } from '@/utils/guarded-alert';
 import { getSharedUrlFromIntent } from '@/utils/shared-url';
 
 const IMG_WORDMARK = require('@/assets/images/login_wordmark.png');
@@ -62,7 +63,7 @@ export default function LoginScreen() {
     }
 
     shownNoticeRef.current = notice;
-    Alert.alert(alert.title, alert.message);
+    showAlert(alert.title, alert.message);
   }, [notice]);
 
   const handleGoogleLogin = async () => {
@@ -98,7 +99,7 @@ export default function LoginScreen() {
         }
       }
 
-      Alert.alert(
+      showAlert(
         '로그인 실패',
         '계정 연결 중 서버와 통신하지 못했습니다. 잠시 후 다시 시도해주세요.'
       );

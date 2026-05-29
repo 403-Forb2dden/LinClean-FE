@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Colors, Typography } from '@/constants/theme';
+import { useGuardedPress } from '@/utils/press-guard';
 
 type Variant = 'checked' | 'unchecked';
 
@@ -42,10 +43,11 @@ export function CheckIcon({
 }: CheckIconProps) {
   const isChecked = checked ?? variant === 'checked';
   const labelColor = disabled ? Colors.brand.textHint : Colors.brand.textSecondary;
+  const guardedOnPress = useGuardedPress(onPress, { disabled });
 
   return (
     <Pressable
-      onPress={disabled ? undefined : onPress}
+      onPress={guardedOnPress}
       style={({ pressed }) => [
         styles.container,
         pressed && !disabled && styles.pressed,

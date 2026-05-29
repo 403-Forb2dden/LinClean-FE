@@ -1,6 +1,5 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
-  Alert,
   FlatList,
   StyleSheet,
   Text,
@@ -9,41 +8,11 @@ import {
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 
 import { Button } from '@/components/ui/button';
-import { CardLink } from '@/components/ui/card-link';
-import { SelectionCircle } from '@/components/ui/selection-circle';
+import { SelectableLinkCard } from '@/components/ui/selectable-link-card';
 import { Colors, Typography } from '@/constants/theme';
 import { getFolderErrorMessage, useFolders } from '@/context/folders-context';
-import { useSavedLinks, type SavedLink } from '@/context/saved-links-context';
-
-// ─── Selectable card row ──────────────────────────────────────────────────────
-
-interface SelectableCardProps {
-  link: SavedLink;
-  selected: boolean;
-  onToggle: (id: number) => void;
-}
-
-function SelectableCard({ link, selected, onToggle }: SelectableCardProps) {
-  return (
-    <View style={styles.cardRow}>
-      <CardLink
-        verdict={link.verdict}
-        title={link.title}
-        originalUrl={link.originalUrl}
-        finalUrl={link.finalUrl}
-        bookmarked={link.isBookmarked}
-        icon={false}
-        onPress={() => onToggle(link.id)}
-      />
-      {selected && (
-        <View style={styles.selectedOverlay} pointerEvents="none" />
-      )}
-      <View style={styles.checkOverlay} pointerEvents="none">
-        <SelectionCircle selected={selected} />
-      </View>
-    </View>
-  );
-}
+import { useSavedLinks } from '@/context/saved-links-context';
+import { showAlert } from '@/utils/guarded-alert';
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -60,6 +29,7 @@ export default function FolderAddUrlScreen() {
 
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [isAdding, setIsAdding] = useState(false);
+  const isAddingRef = useRef(false);
 
   const toggleSelect = useCallback((id: number) => {
     setSelectedIds((prev) => {
@@ -74,7 +44,8 @@ export default function FolderAddUrlScreen() {
   }, []);
 
   const handleAdd = async () => {
-    if (isAdding || selectedIds.size === 0) return;
+    if (isAddingRef.current || selectedIds.size === 0) return;
+    isAddingRef.current = true;
     setIsAdding(true);
     try {
       await assignCategory([...selectedIds], Number(folderId));
@@ -84,11 +55,12 @@ export default function FolderAddUrlScreen() {
         params: { id: folderId, urlAdded: '1' },
       });
     } catch (error) {
-      Alert.alert(
+      showAlert(
         'URL 추가 실패',
         getFolderErrorMessage(error, '선택한 URL을 폴더에 추가하지 못했습니다. 잠시 후 다시 시도해주세요.'),
       );
     } finally {
+      isAddingRef.current = false;
       setIsAdding(false);
     }
   };
@@ -132,7 +104,7 @@ export default function FolderAddUrlScreen() {
             data={uncategorizedLinks}
             keyExtractor={(item) => String(item.id)}
             renderItem={({ item }) => (
-              <SelectableCard
+              <SelectableLinkCard
                 link={item}
                 selected={selectedIds.has(item.id)}
                 onToggle={toggleSelect}
@@ -214,25 +186,6 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 8,
-  },
-
-  cardRow: {
-    position: 'relative',
-    borderRadius: 22,
-    overflow: 'hidden',
-  },
-  selectedOverlay: {
-    position: 'absolute',
-    inset: 0,
-    borderRadius: 22,
-    backgroundColor: Colors.brand.overlaySelected,
-  },
-  checkOverlay: {
-    position: 'absolute',
-    right: 16,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
   },
 
   emptyState: {

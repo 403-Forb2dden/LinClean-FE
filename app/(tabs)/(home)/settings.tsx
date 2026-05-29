@@ -2,7 +2,7 @@ import { useAuth } from '@clerk/expo';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApiError } from '@/api/api-client';
@@ -10,6 +10,8 @@ import { withdrawMember } from '@/api/members';
 import { AppIcon } from '@/components/ui/app-icon';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Typography } from '@/constants/theme';
+import { showAlert } from '@/utils/guarded-alert';
+import { useGuardedPress } from '@/utils/press-guard';
 
 const version = Constants.expoConfig?.version ?? '—';
 type LoginNotice = 'withdrawal-complete' | 'session-expired';
@@ -27,10 +29,12 @@ interface SettingRowProps {
 }
 
 function SettingRow({ label, onPress, rightText, destructive = false, showChevron = false }: SettingRowProps) {
+  const guardedOnPress = useGuardedPress(onPress, { disabled: !onPress });
+
   return (
     <TouchableOpacity
       style={styles.row}
-      onPress={onPress}
+      onPress={guardedOnPress}
       activeOpacity={onPress ? 0.7 : 1}
       disabled={!onPress}
     >
@@ -48,17 +52,37 @@ function SettingRow({ label, onPress, rightText, destructive = false, showChevro
 export default function SettingsScreen() {
   const { getToken, signOut } = useAuth();
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const isWithdrawingRef = useRef(false);
+  const isLoggingOutRef = useRef(false);
 
   function handleLogout() {
-    Alert.alert('로그아웃', '로그아웃하시겠습니까?', [
+    if (isLoggingOutRef.current) {
+      return;
+    }
+
+    showAlert('로그아웃', '로그아웃하시겠습니까?', [
       { text: '취소', style: 'cancel' },
       {
         text: '로그아웃',
         style: 'destructive',
         onPress: async () => {
-          await signOut();
-          router.replace('/(auth)/login');
+          if (isLoggingOutRef.current) {
+            return;
+          }
+
+          isLoggingOutRef.current = true;
+          setIsLoggingOut(true);
+
+          try {
+            await signOut();
+            router.replace('/(auth)/login');
+          } catch (error) {
+            console.error(error);
+            isLoggingOutRef.current = false;
+            setIsLoggingOut(false);
+            showAlert('로그아웃 실패', '로그아웃 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+          }
         },
       },
     ]);
@@ -69,7 +93,7 @@ export default function SettingsScreen() {
       return;
     }
 
-    Alert.alert(
+    showAlert(
       '회원탈퇴',
       '회원탈퇴하시겠습니까? 탈퇴 후에는 현재 계정으로 서비스를 이용할 수 없습니다.',
       [
@@ -106,7 +130,7 @@ export default function SettingsScreen() {
 
       isWithdrawingRef.current = false;
       setIsWithdrawing(false);
-      Alert.alert(
+      showAlert(
         '회원탈퇴 실패',
         '회원탈퇴 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.',
       );
@@ -181,7 +205,11 @@ export default function SettingsScreen() {
         {/* 계정 */}
         <SectionLabel label="계정" />
         <View style={styles.group}>
-          <SettingRow label="로그아웃" onPress={handleLogout} />
+          <SettingRow
+            label="로그아웃"
+            rightText={isLoggingOut ? '처리 중' : undefined}
+            onPress={isLoggingOut ? undefined : handleLogout}
+          />
           <View style={styles.divider} />
           <SettingRow
             label="회원탈퇴"

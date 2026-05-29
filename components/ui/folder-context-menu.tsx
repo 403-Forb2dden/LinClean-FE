@@ -1,5 +1,6 @@
 import { Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Colors, Typography } from '@/constants/theme';
+import { useGuardedPress } from '@/utils/press-guard';
 import type { AnchorPosition } from './folder-card';
 
 const MENU_WIDTH = 140;
@@ -36,6 +37,11 @@ export function FolderContextMenu({
     { label: '폴더명 수정', onPress: () => onEditName?.() },
     { label: '폴더 삭제', onPress: () => onDelete?.(), destructive: true },
   ];
+  const guardedDismiss = useGuardedPress(onDismiss, { lockMs: 250 });
+  const guardedItemPress = useGuardedPress((item: ContextMenuItem) => {
+    onDismiss?.();
+    item.onPress();
+  });
 
   const menuHeight = MENU_ITEM_HEIGHT * resolvedItems.length + (resolvedItems.length - 1);
 
@@ -56,17 +62,14 @@ export function FolderContextMenu({
       animationType="fade"
       onRequestClose={onDismiss}
     >
-      <Pressable style={styles.backdrop} onPress={onDismiss}>
+      <Pressable style={styles.backdrop} onPress={guardedDismiss}>
         <View style={[styles.menu, { top: menuTop, left: menuLeft }]}>
           {resolvedItems.map((item, index) => (
             <View key={item.label}>
               {index > 0 && <View style={styles.divider} />}
               <Pressable
                 style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}
-                onPress={() => {
-                  onDismiss?.();
-                  item.onPress();
-                }}
+                onPress={() => guardedItemPress?.(item)}
                 accessibilityRole="button"
                 accessibilityLabel={item.label}
               >

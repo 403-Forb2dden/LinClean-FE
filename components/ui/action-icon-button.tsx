@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { Colors, Typography } from '@/constants/theme';
+import { useGuardedPress } from '@/utils/press-guard';
 import { IconSymbol } from './icon-symbol';
 
 type Variant = 'delete' | 'erase';
@@ -28,10 +29,11 @@ export function ActionIconButton({
   const labelColor = disabled ? Colors.brand.textHint : Colors.brand.textSecondary;
   const showIcon = icon;
   const showLabel = Boolean(label);
+  const guardedOnPress = useGuardedPress(onPress, { disabled });
 
   return (
     <Pressable
-      onPress={disabled ? undefined : onPress}
+      onPress={guardedOnPress}
       style={({ pressed }) => [
         styles.container,
         pressed && !disabled && styles.pressed,

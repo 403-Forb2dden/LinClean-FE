@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -13,16 +14,30 @@ import { router, Stack } from 'expo-router';
 import { Button } from '@/components/ui/button';
 import { Colors, Typography } from '@/constants/theme';
 import { useFolders } from '@/context/folders-context';
+import { useGuardedPress } from '@/utils/press-guard';
 
 export default function FolderNameScreen() {
   const [folderName, setFolderName] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isNavigating, setIsNavigating] = useState(false);
+  const isNavigatingRef = useRef(false);
   const { folders } = useFolders();
 
-  const canProceed = folderName.trim().length > 0;
+  useFocusEffect(
+    useCallback(() => {
+      isNavigatingRef.current = false;
+      setIsNavigating(false);
+    }, []),
+  );
+
+  const canProceed = folderName.trim().length > 0 && !isNavigating;
 
   const handleNext = () => {
+    if (isNavigatingRef.current) {
+      return;
+    }
+
     const trimmedName = folderName.trim();
     const hasDuplicateName = folders.some(
       (folder) => normalizeFolderName(folder.name) === normalizeFolderName(trimmedName),
@@ -34,11 +49,14 @@ export default function FolderNameScreen() {
     }
 
     setErrorMessage('');
+    isNavigatingRef.current = true;
+    setIsNavigating(true);
     router.push({
       pathname: '/(tabs)/(folder)/folder-url-select',
       params: { folderName: trimmedName },
     });
   };
+  const guardedClearFolderName = useGuardedPress(() => setFolderName(''), { lockMs: 250 });
 
   return (
     <>
@@ -87,7 +105,7 @@ export default function FolderNameScreen() {
                 />
                 {folderName.length > 0 && (
                   <TouchableOpacity
-                    onPress={() => setFolderName('')}
+                    onPress={guardedClearFolderName}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     style={styles.clearButton}
                   >

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -12,6 +13,7 @@ import {
 } from 'react-native';
 
 import { Colors, Typography } from '@/constants/theme';
+import { useGuardedPress } from '@/utils/press-guard';
 
 interface LinkSaveModalProps {
   visible: boolean;
@@ -44,19 +46,21 @@ export function LinkSaveModal({
     if (saveDisabled) return;
     onSave(trimmedTitle);
   };
+  const guardedCancel = useGuardedPress(onCancel, { disabled: loading, lockMs: 250 });
+  const guardedSave = useGuardedPress(handleSave, { disabled: saveDisabled });
 
   return (
     <Modal
       visible={visible}
       transparent
       animationType="slide"
-      onRequestClose={onCancel}
+      onRequestClose={guardedCancel}
     >
       <KeyboardAvoidingView
         style={styles.overlay}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <Pressable style={styles.backdrop} onPress={loading ? undefined : onCancel} />
+        <Pressable style={styles.backdrop} onPress={guardedCancel} />
 
         <View style={styles.sheet}>
           <View style={styles.handle} />
@@ -75,7 +79,7 @@ export function LinkSaveModal({
               placeholder="예: 네이버 블로그"
               placeholderTextColor={Colors.brand.textHint}
               returnKeyType="done"
-              onSubmitEditing={handleSave}
+              onSubmitEditing={Keyboard.dismiss}
               maxLength={500}
               editable={!loading}
               autoFocus
@@ -94,7 +98,7 @@ export function LinkSaveModal({
           <View style={styles.actions}>
             <TouchableOpacity
               style={styles.cancelButton}
-              onPress={onCancel}
+              onPress={guardedCancel}
               activeOpacity={0.8}
               disabled={loading}
             >
@@ -103,7 +107,7 @@ export function LinkSaveModal({
 
             <TouchableOpacity
               style={[styles.saveButton, saveDisabled && styles.saveButtonDisabled]}
-              onPress={handleSave}
+              onPress={guardedSave}
               activeOpacity={0.8}
               disabled={saveDisabled}
             >
