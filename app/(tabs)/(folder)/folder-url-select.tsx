@@ -1,6 +1,5 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
-  Alert,
   FlatList,
   StyleSheet,
   Text,
@@ -13,6 +12,7 @@ import { SelectableLinkCard } from '@/components/ui/selectable-link-card';
 import { Colors, Typography } from '@/constants/theme';
 import { getFolderErrorMessage, useFolders } from '@/context/folders-context';
 import { useSavedLinks } from '@/context/saved-links-context';
+import { showAlert } from '@/utils/guarded-alert';
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -24,6 +24,7 @@ export default function FolderUrlSelectScreen() {
   const { links: allLinks, refreshLinks } = useSavedLinks();
   const links = allLinks.filter((l) => l.categoryId === null);
   const name = (folderName ?? '새 폴더').trim();
+  const isCreatingRef = useRef(false);
 
   const toggleSelect = useCallback((id: number) => {
     setSelectedIds((prev) => {
@@ -38,15 +39,17 @@ export default function FolderUrlSelectScreen() {
   }, []);
 
   const handleCreate = async () => {
-    if (isCreating) return;
+    if (isCreatingRef.current) return;
+    isCreatingRef.current = true;
     setIsCreating(true);
     try {
       await addFolder(name, [...selectedIds]);
     } catch (error) {
-      Alert.alert(
+      showAlert(
         '폴더 생성 실패',
         getFolderErrorMessage(error, '폴더를 생성하지 못했습니다. 잠시 후 다시 시도해주세요.'),
       );
+      isCreatingRef.current = false;
       setIsCreating(false);
       return;
     }
@@ -55,8 +58,6 @@ export default function FolderUrlSelectScreen() {
       await refreshLinks();
     } catch {
       // Link refresh is best-effort after the folder has already been created.
-    } finally {
-      setIsCreating(false);
     }
 
     router.dismissAll();
@@ -64,6 +65,8 @@ export default function FolderUrlSelectScreen() {
       pathname: '/(tabs)/(folder)',
       params: { folderCreated: String(Date.now()) },
     });
+    isCreatingRef.current = false;
+    setIsCreating(false);
   };
 
   const selectedCount = selectedIds.size;

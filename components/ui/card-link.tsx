@@ -1,6 +1,8 @@
 import { useRef } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
 import { Colors, Typography } from '@/constants/theme';
+import { showAlert } from '@/utils/guarded-alert';
+import { useGuardedPress } from '@/utils/press-guard';
 import type { AnchorPosition } from './folder-card';
 import { IconSymbol } from './icon-symbol';
 
@@ -55,16 +57,18 @@ export function CardLink({
   const normalizedVerdict = verdict && verdict in VERDICT_LABELS ? verdict : undefined;
   const statusLabel = normalizedVerdict ? VERDICT_LABELS[normalizedVerdict] : (getFirstText(label) ?? '결과 없음');
   const statusColors = normalizedVerdict ? VERDICT_COLORS[normalizedVerdict] : undefined;
+  const guardedBookmark = useGuardedPress(onBookmark, { disabled });
+  const guardedMore = useGuardedPress(onMore, { disabled });
 
   const handleBookmarkPress = (event: GestureResponderEvent) => {
     event.stopPropagation();
-    onBookmark?.();
+    guardedBookmark?.();
   };
 
   const handleMorePress = (event: GestureResponderEvent) => {
     event.stopPropagation();
     moreRef.current?.measure((_fx, _fy, width, height, px, py) => {
-      onMore?.({ x: px, y: py, width, height });
+      guardedMore?.({ x: px, y: py, width, height });
     });
   };
 
@@ -76,20 +80,21 @@ export function CardLink({
     }
 
     if (!openUrl) {
-      Alert.alert('URL을 열 수 없어요', '저장된 URL 정보가 없습니다.');
+      showAlert('URL을 열 수 없어요', '저장된 URL 정보가 없습니다.');
       return;
     }
 
     try {
       await Linking.openURL(openUrl);
     } catch {
-      Alert.alert('URL을 열 수 없어요', '잠시 후 다시 시도해주세요.');
+      showAlert('URL을 열 수 없어요', '잠시 후 다시 시도해주세요.');
     }
   };
+  const guardedCardPress = useGuardedPress(handleCardPress, { disabled });
 
   return (
     <Pressable
-      onPress={handleCardPress}
+      onPress={guardedCardPress}
       style={({ pressed }) => [
         styles.card,
         disabled && styles.cardDisabled,

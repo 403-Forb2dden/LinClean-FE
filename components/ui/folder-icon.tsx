@@ -1,6 +1,7 @@
 import { StyleSheet, Text, TouchableOpacity, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Colors, Typography } from '@/constants/theme';
+import { useGuardedPress } from '@/utils/press-guard';
 import { IconSymbol } from './icon-symbol';
 
 export interface FolderIconProps {
@@ -33,10 +34,11 @@ export function FolderIcon({
     : active
       ? Colors.brand.text
       : Colors.brand.textSecondary;
+  const guardedOnPress = useGuardedPress(onPress, { disabled });
 
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={guardedOnPress}
       disabled={disabled}
       activeOpacity={0.7}
       style={[styles.container, style]}
