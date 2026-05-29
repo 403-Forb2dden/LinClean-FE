@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-<<<<<<< fix/#56-prevent-duplicate-taps-alert-touch-through
-=======
-  Alert,
->>>>>>> dev
   Keyboard,
   LayoutAnimation,
   Modal,
@@ -175,21 +171,15 @@ export default function FolderScreen() {
   };
 
   const handleRenameCancel = () => {
-<<<<<<< fix/#56-prevent-duplicate-taps-alert-touch-through
     if (isMutatingRef.current) {
       return;
     }
 
-=======
->>>>>>> dev
     if (renameFocusTimerRef.current) {
       clearTimeout(renameFocusTimerRef.current);
       renameFocusTimerRef.current = null;
     }
-<<<<<<< fix/#56-prevent-duplicate-taps-alert-touch-through
 
-=======
->>>>>>> dev
     setRenameState({ visible: false, value: '', currentName: '' });
   };
 
@@ -244,15 +234,12 @@ export default function FolderScreen() {
     trimmedRenameValue.length === 0 ||
     trimmedRenameValue === renameState.currentName.trim() ||
     isMutating;
-<<<<<<< fix/#56-prevent-duplicate-taps-alert-touch-through
   const guardedRenameCancel = useGuardedPress(handleRenameCancel, { disabled: isMutating, lockMs: 250 });
   const guardedRenameConfirm = useGuardedPress(handleRenameConfirm, { disabled: renameSubmitDisabled });
   const guardedClearRename = useGuardedPress(
     () => setRenameState((s) => ({ ...s, value: '' })),
     { disabled: isMutating, lockMs: 250 },
   );
-=======
->>>>>>> dev
   const renameRestingBottomInset = Math.max(insets.bottom, RENAME_MODAL_BOTTOM_GAP);
   const renameModalBottomInset = renameKeyboardInset > 0
     ? renameKeyboardInset + RENAME_KEYBOARD_TOP_GAP
@@ -346,11 +333,7 @@ export default function FolderScreen() {
         visible={renameState.visible}
         transparent
         animationType="fade"
-<<<<<<< fix/#56-prevent-duplicate-taps-alert-touch-through
         onRequestClose={guardedRenameCancel}
-=======
-        onRequestClose={handleRenameCancel}
->>>>>>> dev
         onShow={handleRenameModalShow}
       >
         <View
@@ -381,11 +364,7 @@ export default function FolderScreen() {
                 />
                 {renameState.value.length > 0 && (
                   <TouchableOpacity
-<<<<<<< fix/#56-prevent-duplicate-taps-alert-touch-through
                     onPress={guardedClearRename}
-=======
-                    onPress={() => setRenameState((s) => ({ ...s, value: '' }))}
->>>>>>> dev
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     style={renameStyles.clearButton}
                   >
@@ -394,7 +373,6 @@ export default function FolderScreen() {
                 )}
               </View>
               <View style={renameStyles.actions}>
-<<<<<<< fix/#56-prevent-duplicate-taps-alert-touch-through
                 <TouchableOpacity style={renameStyles.cancelBtn} onPress={guardedRenameCancel}>
                   <Text style={renameStyles.cancelText}>취소</Text>
                 </TouchableOpacity>
@@ -407,23 +385,6 @@ export default function FolderScreen() {
                     저장
                   </Text>
                 </TouchableOpacity>
-=======
-                <TouchableOpacity
-                  style={renameStyles.cancelBtn}
-                  onPress={handleRenameCancel}
-                >
-                  <Text style={renameStyles.cancelText}>취소</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[renameStyles.confirmBtn, renameSubmitDisabled && renameStyles.confirmBtnDisabled]}
-                  onPress={handleRenameConfirm}
-                  disabled={renameSubmitDisabled}
-                >
-                  <Text style={[renameStyles.confirmText, renameSubmitDisabled && renameStyles.confirmTextDisabled]}>
-                    저장
-                  </Text>
-                </TouchableOpacity>
->>>>>>> dev
               </View>
             </ScrollView>
           </View>

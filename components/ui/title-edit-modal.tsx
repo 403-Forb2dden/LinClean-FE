@@ -1,9 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-<<<<<<< fix/#56-prevent-duplicate-taps-alert-touch-through
-=======
-  Alert,
->>>>>>> dev
   Keyboard,
   LayoutAnimation,
   Modal,
@@ -21,12 +17,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors, Typography } from '@/constants/theme';
 import { getSavedLinkErrorMessage, type SavedLink } from '@/context/saved-links-context';
-<<<<<<< fix/#56-prevent-duplicate-taps-alert-touch-through
 import { showAlert } from '@/utils/guarded-alert';
 import { useGuardedPress } from '@/utils/press-guard';
-=======
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
->>>>>>> dev
 
 const MODAL_BOTTOM_GAP = 16;
 const KEYBOARD_TOP_GAP = 8;
@@ -151,15 +143,12 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
     trimmedTitleValue.length > 500 ||
     trimmedTitleValue === editingLink?.title.trim() ||
     isUpdatingTitle;
-<<<<<<< fix/#56-prevent-duplicate-taps-alert-touch-through
   const guardedClose = useGuardedPress(handleClose, { disabled: isUpdatingTitle, lockMs: 250 });
   const guardedConfirm = useGuardedPress(handleConfirm, { disabled: titleSubmitDisabled });
   const guardedClearTitle = useGuardedPress(() => setTitleValue(''), {
     disabled: isUpdatingTitle,
     lockMs: 250,
   });
-=======
->>>>>>> dev
   const restingBottomInset = Math.max(insets.bottom, MODAL_BOTTOM_GAP);
   const modalBottomInset = keyboardInset > 0
     ? keyboardInset + KEYBOARD_TOP_GAP
@@ -170,11 +159,7 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
       visible={editingLink !== null}
       transparent
       animationType="fade"
-<<<<<<< fix/#56-prevent-duplicate-taps-alert-touch-through
       onRequestClose={guardedClose}
-=======
-      onRequestClose={handleClose}
->>>>>>> dev
       onShow={handleModalShow}
     >
       <View
@@ -206,11 +191,7 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
               />
               {titleValue.length > 0 && !isUpdatingTitle && (
                 <TouchableOpacity
-<<<<<<< fix/#56-prevent-duplicate-taps-alert-touch-through
                   onPress={guardedClearTitle}
-=======
-                  onPress={() => setTitleValue('')}
->>>>>>> dev
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   style={styles.clearButton}
                 >
@@ -221,22 +202,14 @@ export function TitleEditModal({ editingLink, onConfirm, onClose }: TitleEditMod
             <View style={styles.actions}>
               <TouchableOpacity
                 style={styles.cancelBtn}
-<<<<<<< fix/#56-prevent-duplicate-taps-alert-touch-through
                 onPress={guardedClose}
-=======
-                onPress={handleClose}
->>>>>>> dev
                 disabled={isUpdatingTitle}
               >
                 <Text style={styles.cancelText}>취소</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.confirmBtn, titleSubmitDisabled && styles.confirmBtnDisabled]}
-<<<<<<< fix/#56-prevent-duplicate-taps-alert-touch-through
                 onPress={guardedConfirm}
-=======
-                onPress={handleConfirm}
->>>>>>> dev
                 disabled={titleSubmitDisabled}
               >
                 <Text style={[styles.confirmText, titleSubmitDisabled && styles.confirmTextDisabled]}>
