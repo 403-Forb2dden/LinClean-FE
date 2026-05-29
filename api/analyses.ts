@@ -1,5 +1,6 @@
 import {
   authenticatedApiRequest,
+  publicApiRequest,
   type ApiRequestOptions,
   type ClerkTokenGetter,
 } from '@/api/api-client';
@@ -30,6 +31,8 @@ export type AnalysisResponse = {
   errorMessage?: string;
 };
 
+export type VerdictStatisticsResponse = Record<AnalysisVerdict, number>;
+
 type AnalysisRequestOptions = Pick<ApiRequestOptions, 'signal'>;
 
 export function requestAnalysis(
@@ -52,6 +55,13 @@ export function fetchAnalysis(
   return authenticatedApiRequest<AnalysisResponse>(
     getToken,
     `/api/v1/analyses/${encodeURIComponent(analysisId)}`,
+    options,
+  );
+}
+
+export function fetchVerdictStatistics(options: AnalysisRequestOptions = {}) {
+  return publicApiRequest<VerdictStatisticsResponse>(
+    '/api/v1/analyses/statistics',
     options,
   );
 }

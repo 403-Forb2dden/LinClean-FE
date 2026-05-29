@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { AppIcon } from '@/components/ui/app-icon';
@@ -16,6 +17,11 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { SectionHeader } from '@/components/ui/section-header';
 import { TitleEditModal } from '@/components/ui/title-edit-modal';
 import { Toast } from '@/components/ui/toast';
+import {
+  fetchVerdictStatistics,
+  type AnalysisVerdict,
+  type VerdictStatisticsResponse,
+} from '@/api/analyses';
 import { Colors, Typography } from '@/constants/theme';
 import { useFolders } from '@/context/folders-context';
 import { getSavedLinkErrorMessage, useSavedLinks, type SavedLink } from '@/context/saved-links-context';
@@ -23,6 +29,31 @@ import type { AnchorPosition } from '@/components/ui/folder-card';
 import { showAlert } from '@/utils/guarded-alert';
 
 const COMPACT_WIDTH = 380;
+
+type SecurityStatusItem = {
+  verdict: AnalysisVerdict;
+  label: string;
+  summary: string;
+};
+
+type StatisticsViewStatus = 'loading' | 'error' | 'ready';
+
+const SECURITY_STATUS_ITEMS: SecurityStatusItem[] = [
+  { verdict: 'safe', label: '안전', summary: '문제 없음' },
+  { verdict: 'caution', label: '주의', summary: '확인 필요' },
+  { verdict: 'danger', label: '위험', summary: '접근 주의' },
+];
+
+const STATISTICS_STATUS_LABELS: Record<Exclude<StatisticsViewStatus, 'ready'>, string> = {
+  loading: '조회 중',
+  error: '불러오지 못했어요',
+};
+
+const EMPTY_STATISTICS: VerdictStatisticsResponse = {
+  safe: 0,
+  caution: 0,
+  danger: 0,
+};
 
 export default function HomeScreen() {
   const { savedLinkToast: savedLinkToastParam } = useLocalSearchParams<{
@@ -37,10 +68,21 @@ export default function HomeScreen() {
   const [saveToastVisible, setSaveToastVisible] = useState(false);
   const [deleteToastVisible, setDeleteToastVisible] = useState(false);
   const [titleToastVisible, setTitleToastVisible] = useState(false);
+  const [statistics, setStatistics] = useState<VerdictStatisticsResponse>(EMPTY_STATISTICS);
+  const [isStatisticsLoading, setIsStatisticsLoading] = useState(true);
+  const [hasStatisticsError, setHasStatisticsError] = useState(false);
   const lastToastParamRef = useRef<string | undefined>(undefined);
   const deletingLinkIdsRef = useRef<Set<number>>(new Set());
   const savedLinkToast = typeof savedLinkToastParam === 'string' ? savedLinkToastParam : undefined;
   const isCompactWidth = windowWidth < COMPACT_WIDTH;
+  const statisticsStatus = getStatisticsViewStatus(
+    isStatisticsLoading,
+    hasStatisticsError,
+  );
+  const hasNoStatistics = SECURITY_STATUS_ITEMS.every(
+    (item) => statistics[item.verdict] === 0,
+  );
+  const statisticsStatusLabel = getStatisticsStatusLabel(statisticsStatus, hasNoStatistics);
 
   // 최근 저장한 링크 — createdAt 내림차순 상위 3개
   const recentLinks = links.slice(0, 3);
@@ -53,6 +95,39 @@ export default function HomeScreen() {
     lastToastParamRef.current = savedLinkToast;
     setSaveToastVisible(true);
   }, [savedLinkToast]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const abortController = new AbortController();
+
+      async function loadStatistics() {
+        setIsStatisticsLoading(true);
+        setHasStatisticsError(false);
+
+        try {
+          const response = await fetchVerdictStatistics({ signal: abortController.signal });
+          setStatistics(response);
+        } catch {
+          if (abortController.signal.aborted) {
+            return;
+          }
+
+          setStatistics(EMPTY_STATISTICS);
+          setHasStatisticsError(true);
+        } finally {
+          if (!abortController.signal.aborted) {
+            setIsStatisticsLoading(false);
+          }
+        }
+      }
+
+      void loadStatistics();
+
+      return () => {
+        abortController.abort();
+      };
+    }, []),
+  );
 
   const handleMore = (id: number, anchor: AnchorPosition) => {
     setMenuState({ visible: true, anchor, linkId: id });
@@ -149,14 +224,50 @@ export default function HomeScreen() {
 
         {/* 보안 등급별 링크 현황 */}
         <View style={styles.section}>
-          <SectionHeader label="보안 등급별 링크 현황" compact={isCompactWidth} />
-          <View style={[styles.statPlaceholder, isCompactWidth && styles.statPlaceholderCompact]}>
-            <View style={[styles.statGrid, isCompactWidth && styles.statGridCompact]}>
-              <View style={[styles.statItem, isCompactWidth && styles.statItemCompact]} />
-              <View style={[styles.statItem, isCompactWidth && styles.statItemCompact]} />
-              <View style={[styles.statItem, isCompactWidth && styles.statItemCompact]} />
-              <View style={[styles.statItem, isCompactWidth && styles.statItemCompact]} />
-            </View>
+          <SectionHeader
+            label="보안 등급별 링크 현황"
+            compact={isCompactWidth}
+            rightSlot={
+              statisticsStatusLabel ? (
+                <Text style={styles.sectionStatus}>{statisticsStatusLabel}</Text>
+              ) : undefined
+            }
+          />
+          <View style={[styles.statCardGroup, isCompactWidth && styles.statCardGroupCompact]}>
+            {SECURITY_STATUS_ITEMS.map((item) => {
+              const colors = Colors.brand.verdict[item.verdict];
+              const countLabel = getStatisticsCountLabel(
+                item.verdict,
+                statistics,
+                statisticsStatus,
+              );
+              const summary = getStatisticsSummary(item);
+
+              return (
+                <View
+                  key={item.verdict}
+                  style={[
+                    styles.statCard,
+                    { backgroundColor: colors.background, borderColor: colors.accent },
+                  ]}
+                >
+                  <View style={styles.statCardHeader}>
+                    <View style={[styles.statIndicator, { backgroundColor: colors.accent }]} />
+                    <Text style={[styles.statLabel, { color: colors.text }]}>{item.label}</Text>
+                  </View>
+                  <Text
+                    style={[styles.statCount, { color: colors.text }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                  >
+                    {countLabel}
+                  </Text>
+                  <Text style={[styles.statSummary, { color: colors.text }]} numberOfLines={1}>
+                    {summary}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
         </View>
 
@@ -284,38 +395,91 @@ const styles = StyleSheet.create({
     gap: 12,
   },
 
-  statPlaceholder: {
+  sectionStatus: {
+    ...Typography.bold12,
+    color: Colors.brand.textHint,
+  },
+
+  statCardGroup: {
     backgroundColor: Colors.brand.surface,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.brand.line,
     padding: 16,
-  },
-  statPlaceholderCompact: {
-    padding: 14,
-  },
-  statGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 12,
   },
-  statGridCompact: {
+  statCardGroupCompact: {
+    padding: 14,
     gap: 10,
   },
-  statItem: {
+  statCard: {
     flex: 1,
-    minWidth: '45%',
-    height: 56,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.brand.line,
-    borderStyle: 'dashed',
+    minHeight: 112,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+    justifyContent: 'space-between',
   },
-  statItemCompact: {
-    height: 48,
+  statCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statLabel: {
+    ...Typography.bold12,
+  },
+  statCount: {
+    ...Typography.title,
+    lineHeight: 30,
+  },
+  statSummary: {
+    ...Typography.regular12,
   },
 
   linkList: {
     gap: 12,
   },
 });
+
+function getStatisticsViewStatus(
+  isLoading: boolean,
+  hasError: boolean,
+): StatisticsViewStatus {
+  if (isLoading) {
+    return 'loading';
+  }
+
+  if (hasError) {
+    return 'error';
+  }
+
+  return 'ready';
+}
+
+function getStatisticsStatusLabel(status: StatisticsViewStatus, hasNoStatistics: boolean) {
+  if (status === 'ready') {
+    return hasNoStatistics ? '기록 없음' : '';
+  }
+
+  return STATISTICS_STATUS_LABELS[status];
+}
+
+function getStatisticsCountLabel(
+  verdict: AnalysisVerdict,
+  statistics: VerdictStatisticsResponse,
+  status: StatisticsViewStatus,
+) {
+  return status === 'loading' || status === 'error'
+    ? '-'
+    : String(statistics[verdict]);
+}
+
+function getStatisticsSummary(item: SecurityStatusItem) {
+  return item.summary;
+}
