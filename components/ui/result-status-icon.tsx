@@ -10,6 +10,7 @@ interface ResultStatusIconProps {
   icon?: boolean;
   disabled?: boolean;
   size?: 'default' | 'large';
+  compact?: boolean;
 }
 
 const VARIANT_CONFIG = {
@@ -49,23 +50,53 @@ export function ResultStatusIcon({
   icon = true,
   disabled = false,
   size = 'default',
+  compact = false,
 }: ResultStatusIconProps) {
   const config = VARIANT_CONFIG[variant];
   const isLarge = size === 'large';
+  const isCompactLarge = isLarge && compact;
 
   return (
-    <View style={[styles.container, isLarge && styles.containerLarge, disabled && styles.disabled]}>
+    <View
+      style={[
+        styles.container,
+        isLarge && styles.containerLarge,
+        isCompactLarge && styles.containerLargeCompact,
+        disabled && styles.disabled,
+      ]}
+    >
       {/* 외부 글로우 레이어 */}
-      <View style={[styles.glowOuter, isLarge && styles.glowOuterLarge, { backgroundColor: config.glowColor, opacity: disabled ? 0.3 : 0.15 }]} />
+      <View
+        style={[
+          styles.glowOuter,
+          isLarge && styles.glowOuterLarge,
+          isCompactLarge && styles.glowOuterLargeCompact,
+          { backgroundColor: config.glowColor, opacity: disabled ? 0.3 : 0.15 },
+        ]}
+      />
       {/* 내부 글로우 레이어 */}
-      <View style={[styles.glowInner, isLarge && styles.glowInnerLarge, { backgroundColor: config.glowColor, opacity: disabled ? 0.3 : 0.3 }]} />
+      <View
+        style={[
+          styles.glowInner,
+          isLarge && styles.glowInnerLarge,
+          isCompactLarge && styles.glowInnerLargeCompact,
+          { backgroundColor: config.glowColor, opacity: disabled ? 0.3 : 0.3 },
+        ]}
+      />
 
       {/* 방패 아이콘 뱃지 */}
-      <View style={[styles.badge, isLarge && styles.badgeLarge, { borderColor: config.iconColor, opacity: disabled ? 0.4 : 1 }]}>
+      <View
+        style={[
+          styles.badge,
+          isLarge && styles.badgeLarge,
+          isCompactLarge && styles.badgeLargeCompact,
+          { borderColor: config.iconColor, opacity: disabled ? 0.4 : 1 },
+        ]}
+      >
         {icon && (
           <MaterialCommunityIcons
             name={config.iconName}
-            size={isLarge ? 68 : 32}
+            size={isCompactLarge ? 52 : isLarge ? 68 : 32}
             color={config.iconColor}
           />
         )}
@@ -73,8 +104,24 @@ export function ResultStatusIcon({
 
       {/* 하단 상태 칩 */}
       {label && (
-        <View style={[styles.chip, isLarge && styles.chipLarge, { backgroundColor: config.chipBackground, opacity: disabled ? 0.4 : 1 }]}>
-          <Text style={[styles.chipLabel, isLarge && styles.chipLabelLarge, { color: config.chipTextColor }]}>{label}</Text>
+        <View
+          style={[
+            styles.chip,
+            isLarge && styles.chipLarge,
+            isCompactLarge && styles.chipLargeCompact,
+            { backgroundColor: config.chipBackground, opacity: disabled ? 0.4 : 1 },
+          ]}
+        >
+          <Text
+            style={[
+              styles.chipLabel,
+              isLarge && styles.chipLabelLarge,
+              isCompactLarge && styles.chipLabelLargeCompact,
+              { color: config.chipTextColor },
+            ]}
+          >
+            {label}
+          </Text>
         </View>
       )}
     </View>
@@ -87,6 +134,8 @@ const GLOW_OUTER_SIZE = CONTAINER_SIZE;
 const GLOW_INNER_SIZE = 80;
 const LARGE_CONTAINER_SIZE = 216;
 const LARGE_BADGE_SIZE = 136;
+const COMPACT_LARGE_CONTAINER_SIZE = 168;
+const COMPACT_LARGE_BADGE_SIZE = 104;
 
 const styles = StyleSheet.create({
   container: {
@@ -98,6 +147,10 @@ const styles = StyleSheet.create({
   containerLarge: {
     width: LARGE_CONTAINER_SIZE,
     height: LARGE_CONTAINER_SIZE,
+  },
+  containerLargeCompact: {
+    width: COMPACT_LARGE_CONTAINER_SIZE,
+    height: COMPACT_LARGE_CONTAINER_SIZE,
   },
   disabled: {
     opacity: 0.5,
@@ -113,6 +166,11 @@ const styles = StyleSheet.create({
     height: LARGE_CONTAINER_SIZE,
     borderRadius: LARGE_CONTAINER_SIZE / 2,
   },
+  glowOuterLargeCompact: {
+    width: COMPACT_LARGE_CONTAINER_SIZE,
+    height: COMPACT_LARGE_CONTAINER_SIZE,
+    borderRadius: COMPACT_LARGE_CONTAINER_SIZE / 2,
+  },
   glowInner: {
     position: 'absolute',
     width: GLOW_INNER_SIZE,
@@ -123,6 +181,11 @@ const styles = StyleSheet.create({
     width: LARGE_BADGE_SIZE,
     height: LARGE_BADGE_SIZE,
     borderRadius: LARGE_BADGE_SIZE / 2,
+  },
+  glowInnerLargeCompact: {
+    width: COMPACT_LARGE_BADGE_SIZE,
+    height: COMPACT_LARGE_BADGE_SIZE,
+    borderRadius: COMPACT_LARGE_BADGE_SIZE / 2,
   },
   badge: {
     width: BADGE_SIZE,
@@ -138,6 +201,11 @@ const styles = StyleSheet.create({
     height: LARGE_BADGE_SIZE,
     borderRadius: LARGE_BADGE_SIZE / 2,
   },
+  badgeLargeCompact: {
+    width: COMPACT_LARGE_BADGE_SIZE,
+    height: COMPACT_LARGE_BADGE_SIZE,
+    borderRadius: COMPACT_LARGE_BADGE_SIZE / 2,
+  },
   chip: {
     position: 'absolute',
     bottom: 0,
@@ -149,11 +217,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 6,
   },
+  chipLargeCompact: {
+    paddingHorizontal: 16,
+    paddingVertical: 5,
+  },
   chipLabel: {
     ...Typography.caption,
   },
   chipLabelLarge: {
     ...Typography.summary,
     fontWeight: '700',
+  },
+  chipLabelLargeCompact: {
+    ...Typography.bold12,
   },
 });

@@ -5,6 +5,8 @@ import { Colors, Typography } from '@/constants/theme';
 import { useGuardedPress } from '@/utils/press-guard';
 import { AppIcon } from './app-icon';
 
+const DEFAULT_CARD_WIDTH = 144;
+
 export interface AnchorPosition {
   x: number;
   y: number;
@@ -15,6 +17,7 @@ export interface AnchorPosition {
 export interface FolderCardProps {
   folderName: string;
   urlCount: number;
+  width?: number;
   onPress?: () => void;
   onMorePress?: (anchor: AnchorPosition) => void;
   disabled?: boolean;
@@ -23,23 +26,25 @@ export interface FolderCardProps {
 export function FolderCard({
   folderName,
   urlCount,
+  width,
   onPress,
   onMorePress,
   disabled = false,
 }: FolderCardProps) {
   const moreRef = useRef<View>(null);
+  const cardWidth = width ?? DEFAULT_CARD_WIDTH;
   const guardedOnPress = useGuardedPress(onPress, { disabled });
   const guardedOnMorePress = useGuardedPress(onMorePress, { disabled });
 
   const handleMorePress = () => {
-    moreRef.current?.measure((_fx, _fy, width, height, px, py) => {
-      guardedOnMorePress?.({ x: px, y: py, width, height });
+    moreRef.current?.measure((_fx, _fy, measuredWidth, measuredHeight, px, py) => {
+      guardedOnMorePress?.({ x: px, y: py, width: measuredWidth, height: measuredHeight });
     });
   };
 
   return (
     <Pressable
-      style={({ pressed }) => [pressed && !disabled && styles.pressed]}
+      style={({ pressed }) => [styles.root, { width: cardWidth }, pressed && !disabled && styles.pressed]}
       onPress={guardedOnPress}
       accessibilityRole="button"
       accessibilityLabel={`${folderName} 폴더, ${urlCount}개`}
@@ -47,7 +52,7 @@ export function FolderCard({
     >
       {disabled ? (
         <View style={[styles.shadow, styles.shadowDisabled]}>
-          <View style={styles.cardDisabled}>
+          <View style={[styles.cardDisabled, { width: cardWidth }]}>
             <View style={styles.header}>
               <Text style={[styles.count, styles.countDisabled]}>{urlCount}개</Text>
               <View ref={moreRef} collapsable={false}>
@@ -70,7 +75,7 @@ export function FolderCard({
             colors={[Colors.brand.folderGradientStart, Colors.brand.folderGradientEnd]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.card}
+            style={[styles.card, { width: cardWidth }]}
           >
             <View style={styles.header}>
               <Text style={styles.count}>{urlCount}개</Text>
@@ -93,6 +98,9 @@ export function FolderCard({
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flexShrink: 0,
+  },
   shadow: {
     borderRadius: 16,
     shadowColor: Colors.brand.shadow,

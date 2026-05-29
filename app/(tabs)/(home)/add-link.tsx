@@ -7,6 +7,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
@@ -15,6 +16,9 @@ import { ScanButton } from '@/components/ui/scan-button';
 import { Colors, Typography } from '@/constants/theme';
 import { useGuardedPress } from '@/utils/press-guard';
 import { normalizeHttpUrlInput } from '@/utils/shared-url';
+
+const COMPACT_WIDTH = 380;
+const SHORT_SCREEN_HEIGHT = 760;
 
 function getSharedUrlParam(value: string | string[] | undefined): string {
   if (typeof value !== 'string') {
@@ -26,9 +30,11 @@ function getSharedUrlParam(value: string | string[] | undefined): string {
 
 export default function AddLinkScreen() {
   const { sharedUrl } = useLocalSearchParams<{ sharedUrl?: string }>();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const initialSharedUrl = getSharedUrlParam(sharedUrl);
   const [url, setUrl] = useState(initialSharedUrl);
   const [error, setError] = useState('');
+  const isCompact = windowWidth < COMPACT_WIDTH || windowHeight <= SHORT_SCREEN_HEIGHT;
   const [isNavigating, setIsNavigating] = useState(false);
   const isNavigatingRef = useRef(false);
 
@@ -110,19 +116,21 @@ export default function AddLinkScreen() {
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <View style={styles.container}>
+          <View style={[styles.container, isCompact && styles.containerCompact]}>
             {/* 타이틀 */}
-            <View style={styles.titleRow}>
-              <Text style={styles.titleGreen}>링크를</Text>
-              <Text style={styles.titleDark}> 입력해주세요</Text>
+            <View style={[styles.titleRow, isCompact && styles.titleRowCompact]}>
+              <Text style={[styles.titleGreen, isCompact && styles.titleCompact]}>링크를</Text>
+              <Text style={[styles.titleDark, isCompact && styles.titleCompact]}> 입력해주세요</Text>
             </View>
 
             {/* 부제목 */}
-            <Text style={styles.subtitle}>보안검사 후 저장할 수 있습니다.</Text>
+            <Text style={[styles.subtitle, isCompact && styles.subtitleCompact]}>
+              보안검사 후 저장할 수 있습니다.
+            </Text>
 
             {/* URL 입력 + 검사 버튼 */}
-            <View style={styles.inputRow}>
-              <View style={[styles.inputWrapper, hasError && styles.inputError]}>
+            <View style={[styles.inputRow, isCompact && styles.inputRowCompact]}>
+              <View style={[styles.inputWrapper, isCompact && styles.inputWrapperCompact, hasError && styles.inputError]}>
                 <TextInput
                   style={styles.input}
                   placeholder="https://example.com"
@@ -149,10 +157,10 @@ export default function AddLinkScreen() {
             </View>
 
             {/* 에러 메시지 */}
-            {hasError && <Text style={styles.errorText}>{error}</Text>}
+            {hasError && <Text style={[styles.errorText, isCompact && styles.errorTextCompact]}>{error}</Text>}
 
             {/* 안내 박스 */}
-            <View style={styles.infoBox}>
+            <View style={[styles.infoBox, isCompact && styles.infoBoxCompact]}>
               <Text style={styles.infoLabel}>안내</Text>
               <Text style={styles.infoBody}>
                 검사 후 안전한 사이트이라면, 저장하실 수 있습니다.
@@ -178,12 +186,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 16,
   },
+  containerCompact: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
 
   // 타이틀
   titleRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginBottom: 12,
+  },
+  titleRowCompact: {
+    marginBottom: 8,
   },
   titleGreen: {
     ...Typography.display,
@@ -193,12 +208,19 @@ const styles = StyleSheet.create({
     ...Typography.display,
     color: Colors.brand.text,
   },
+  titleCompact: {
+    ...Typography.pageTitle,
+  },
 
   // 부제목
   subtitle: {
     ...Typography.body,
     color: Colors.brand.textSecondary,
     marginBottom: 32,
+  },
+  subtitleCompact: {
+    ...Typography.summary,
+    marginBottom: 24,
   },
 
   // 입력 행
@@ -207,6 +229,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginBottom: 8,
+  },
+  inputRowCompact: {
+    gap: 6,
   },
   inputWrapper: {
     flex: 1,
@@ -218,6 +243,10 @@ const styles = StyleSheet.create({
     borderColor: Colors.brand.line,
     backgroundColor: Colors.brand.surface,
     paddingHorizontal: 16,
+  },
+  inputWrapperCompact: {
+    height: 56,
+    paddingHorizontal: 14,
   },
   inputError: {
     borderColor: Colors.brand.textWarning,
@@ -247,6 +276,10 @@ const styles = StyleSheet.create({
     color: Colors.brand.textWarning,
     marginBottom: 16,
   },
+  errorTextCompact: {
+    ...Typography.summary,
+    marginBottom: 12,
+  },
 
   // 안내 박스
   infoBox: {
@@ -255,6 +288,10 @@ const styles = StyleSheet.create({
     padding: 16,
     marginTop: 16,
     gap: 6,
+  },
+  infoBoxCompact: {
+    padding: 14,
+    marginTop: 12,
   },
   infoLabel: {
     ...Typography.caption,
