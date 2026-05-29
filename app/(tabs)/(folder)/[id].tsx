@@ -1,4 +1,4 @@
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -12,7 +12,8 @@ import { Colors, Typography } from '@/constants/theme';
 import { getSavedLinkErrorMessage, useSavedLinks, type SavedLink } from '@/context/saved-links-context';
 import { useFolders } from '@/context/folders-context';
 import type { AnchorPosition } from '@/components/ui/folder-card';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { showAlert } from '@/utils/guarded-alert';
 
 type MoreMenuState = {
   visible: boolean;
@@ -35,6 +36,7 @@ export default function FolderDetailScreen() {
   const [toastVisible, setToastVisible] = useState(false);
   const [addToastVisible, setAddToastVisible] = useState(false);
   const [titleToastVisible, setTitleToastVisible] = useState(false);
+  const deletingFromFolderIdsRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     if (urlAdded === '1') setAddToastVisible(true);
@@ -45,20 +47,32 @@ export default function FolderDetailScreen() {
   };
 
   const handleDelete = async (linkId: number) => {
+    if (deletingFromFolderIdsRef.current.has(linkId)) {
+      return;
+    }
+
+    deletingFromFolderIdsRef.current.add(linkId);
+
     try {
       await assignCategory([linkId], null);
       await refreshFolders();
       setToastVisible(true);
     } catch (error) {
-      Alert.alert(
+      showAlert(
         '폴더에서 삭제 실패',
         getSavedLinkErrorMessage(error, '링크를 폴더에서 제외하지 못했습니다. 잠시 후 다시 시도해주세요.'),
       );
+    } finally {
+      deletingFromFolderIdsRef.current.delete(linkId);
     }
   };
 
   const confirmDeleteFromFolder = (linkId: number) => {
-    Alert.alert(
+    if (deletingFromFolderIdsRef.current.has(linkId)) {
+      return;
+    }
+
+    showAlert(
       '폴더에서 삭제할까요?',
       '링크는 삭제되지 않아요.\n현재 폴더에서만 제외돼요.',
       [

@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Typography } from '@/constants/theme';
+import { useGuardedPress } from '@/utils/press-guard';
 
 export type BookmarkChipVariant = 'active' | 'inactive';
 
@@ -20,6 +21,7 @@ export function BookmarkChip({
   onPress,
 }: BookmarkChipProps) {
   const isActive = variant === 'active';
+  const guardedOnPress = useGuardedPress(onPress, { disabled });
 
   const containerStyle = disabled
     ? styles.chipDisabled
@@ -41,7 +43,7 @@ export function BookmarkChip({
 
   return (
     <Pressable
-      onPress={disabled ? undefined : onPress}
+      onPress={guardedOnPress}
       style={({ pressed }) => [
         styles.chip,
         containerStyle,

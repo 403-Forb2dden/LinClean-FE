@@ -2,22 +2,38 @@ import { useAuth } from '@clerk/expo';
 import LottieView from 'lottie-react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 
 import { fetchAnalysis, requestAnalysis, type AnalysisResponse, type AnalysisVerdict } from '@/api/analyses';
 import { ApiError } from '@/api/api-client';
 import { Colors, Typography } from '@/constants/theme';
+import { useGuardedPress } from '@/utils/press-guard';
 
 const POLLING_INTERVAL_MS = 2_000;
 const MAX_POLLING_MS = 30_000;
+const SHORT_SCREEN_HEIGHT = 760;
+const VERY_SHORT_SCREEN_HEIGHT = 700;
+const DEFAULT_ANIMATION_SIZE = 280;
+const SHORT_ANIMATION_SIZE = 216;
+const VERY_SHORT_ANIMATION_SIZE = 188;
 
 export default function ScanningScreen() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const { url: urlParam } = useLocalSearchParams<{ url?: string | string[] }>();
   const url = getUrlParam(urlParam);
+  const { height: windowHeight } = useWindowDimensions();
+  const tabBarHeight = useBottomTabBarHeight();
   const [errorMessage, setErrorMessage] = useState('');
   const [retryKey, setRetryKey] = useState(0);
   const getTokenRef = useRef(getToken);
+  const isShortScreen = windowHeight <= SHORT_SCREEN_HEIGHT;
+  const isVeryShortScreen = windowHeight <= VERY_SHORT_SCREEN_HEIGHT;
+  const animationSize = isVeryShortScreen
+    ? VERY_SHORT_ANIMATION_SIZE
+    : isShortScreen
+      ? SHORT_ANIMATION_SIZE
+      : DEFAULT_ANIMATION_SIZE;
 
   useEffect(() => {
     getTokenRef.current = getToken;
@@ -88,6 +104,8 @@ export default function ScanningScreen() {
   }, [isLoaded, isSignedIn, retryKey, url]);
 
   const hasError = errorMessage.length > 0;
+  const guardedRetry = useGuardedPress(() => setRetryKey((key) => key + 1));
+  const guardedBack = useGuardedPress(() => router.back());
 
   return (
     <>
@@ -102,14 +120,28 @@ export default function ScanningScreen() {
           headerShadowVisible: false,
         }}
       />
-      <View style={styles.container}>
+      <View
+        style={[
+          styles.container,
+          isShortScreen && styles.containerCompact,
+          isVeryShortScreen && styles.containerVeryCompact,
+          { paddingBottom: tabBarHeight + 24 },
+        ]}
+      >
         {/* Lottie 애니메이션 + 가운데 점 */}
-        <View style={styles.animationWrapper}>
+        <View
+          style={[
+            styles.animationWrapper,
+            { width: animationSize, height: animationSize },
+            isShortScreen && styles.animationWrapperCompact,
+            isVeryShortScreen && styles.animationWrapperVeryCompact,
+          ]}
+        >
           <LottieView
             source={require('@/assets/animations/scanning.json')}
             autoPlay={!hasError}
             loop={!hasError}
-            style={styles.animation}
+            style={[styles.animation, { width: animationSize, height: animationSize }]}
           />
           <View style={styles.dotsOverlay}>
             <View style={styles.dot} />
@@ -119,15 +151,15 @@ export default function ScanningScreen() {
         </View>
 
         {/* 텍스트 */}
-        <Text style={styles.title}>
+        <Text style={[styles.title, isShortScreen && styles.titleCompact]}>
           {hasError ? '검사를 완료하지 못했어요' : '보안 검사 중입니다'}
         </Text>
-        <Text style={[styles.subtitle, hasError && styles.errorText]}>
+        <Text style={[styles.subtitle, isShortScreen && styles.subtitleCompact, hasError && styles.errorText]}>
           {hasError ? errorMessage : '약 5-10초 정도 소요돼요'}
         </Text>
 
         {/* 검사 대상 카드 */}
-        <View style={styles.card}>
+        <View style={[styles.card, isShortScreen && styles.cardCompact]}>
           <Text style={styles.cardLabel}>검사 대상</Text>
           <Text style={styles.cardUrl} numberOfLines={1} ellipsizeMode="tail">
             {url}
@@ -135,17 +167,17 @@ export default function ScanningScreen() {
         </View>
 
         {hasError && (
-          <View style={styles.buttonArea}>
+          <View style={[styles.buttonArea, isShortScreen && styles.buttonAreaCompact]}>
             <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={() => setRetryKey((key) => key + 1)}
+              style={[styles.primaryButton, isVeryShortScreen && styles.buttonCompact]}
+              onPress={guardedRetry}
               activeOpacity={0.8}
             >
               <Text style={styles.primaryButtonText}>다시 검사</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={() => router.back()}
+              style={[styles.secondaryButton, isVeryShortScreen && styles.buttonCompact]}
+              onPress={guardedBack}
               activeOpacity={0.8}
             >
               <Text style={styles.secondaryButtonText}>돌아가기</Text>
@@ -298,12 +330,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 40,
   },
+  containerCompact: {
+    paddingTop: 20,
+  },
+  containerVeryCompact: {
+    paddingTop: 12,
+  },
   animationWrapper: {
     width: 280,
     height: 280,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 32,
+  },
+  animationWrapperCompact: {
+    marginBottom: 20,
+  },
+  animationWrapperVeryCompact: {
+    marginBottom: 14,
   },
   animation: {
     width: 280,
@@ -328,11 +372,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
   },
+  titleCompact: {
+    ...Typography.pageTitle,
+  },
   subtitle: {
     ...Typography.body,
     color: Colors.brand.textSecondary,
     textAlign: 'center',
     marginBottom: 40,
+  },
+  subtitleCompact: {
+    marginBottom: 24,
   },
   card: {
     width: '100%',
@@ -341,6 +391,10 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 6,
     marginBottom: 24,
+  },
+  cardCompact: {
+    padding: 14,
+    marginBottom: 18,
   },
   cardLabel: {
     ...Typography.caption,
@@ -358,6 +412,9 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: 12,
   },
+  buttonAreaCompact: {
+    gap: 10,
+  },
   primaryButton: {
     width: '100%',
     height: 56,
@@ -365,6 +422,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.brand.primary,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  buttonCompact: {
+    height: 52,
+    borderRadius: 26,
   },
   primaryButtonText: {
     ...Typography.section,

@@ -3,6 +3,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, Vi
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Typography } from '@/constants/theme';
+import { useGuardedPress } from '@/utils/press-guard';
 
 const EXPANDED_LABEL_THRESHOLD = 6;
 const MAX_VISIBLE_LABEL_CHARS = 15;
@@ -48,6 +49,8 @@ interface DropdownProps {
 }
 
 function Dropdown({ items, selectedValue, onSelect, width, maxHeight, left, top, onDismiss }: DropdownProps) {
+  const guardedOnSelect = useGuardedPress(onSelect, { lockMs: 250 });
+
   return (
     <Modal transparent visible animationType="none" onRequestClose={onDismiss}>
       <View style={dropdownStyles.modalRoot}>
@@ -66,7 +69,7 @@ function Dropdown({ items, selectedValue, onSelect, width, maxHeight, left, top,
               return (
                 <View key={item.value}>
                   <Pressable
-                    onPress={() => onSelect(item.value)}
+                    onPress={() => guardedOnSelect?.(item.value)}
                     style={({ pressed }) => [
                       dropdownStyles.item,
                       isSelected && dropdownStyles.itemSelected,
@@ -200,11 +203,13 @@ export function FilterChip({
     onSelect?.(value);
   }
 
+  const guardedHandlePress = useGuardedPress(handlePress, { disabled, lockMs: 250 });
+
   return (
     <View style={chipStyles.wrapper}>
       <Pressable
         ref={chipRef}
-        onPress={handlePress}
+        onPress={guardedHandlePress}
         style={({ pressed }) => [
           chipStyles.chip,
           disabled && chipStyles.chipDisabled,
