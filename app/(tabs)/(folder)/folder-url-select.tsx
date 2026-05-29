@@ -8,43 +8,11 @@ import {
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 
 import { Button } from '@/components/ui/button';
-import { CardLink } from '@/components/ui/card-link';
-import { SelectionCircle } from '@/components/ui/selection-circle';
+import { SelectableLinkCard } from '@/components/ui/selectable-link-card';
 import { Colors, Typography } from '@/constants/theme';
 import { getFolderErrorMessage, useFolders } from '@/context/folders-context';
-import { useSavedLinks, type SavedLink } from '@/context/saved-links-context';
+import { useSavedLinks } from '@/context/saved-links-context';
 import { showAlert } from '@/utils/guarded-alert';
-
-// ─── Selectable card row ──────────────────────────────────────────────────────
-
-interface SelectableCardProps {
-  link: SavedLink;
-  selected: boolean;
-  onToggle: (id: number) => void;
-}
-
-function SelectableCard({ link, selected, onToggle }: SelectableCardProps) {
-  return (
-    <View style={styles.cardRow}>
-      <CardLink
-        verdict={link.verdict}
-        title={link.title}
-        originalUrl={link.originalUrl}
-        finalUrl={link.finalUrl}
-        bookmarked={link.isBookmarked}
-        icon={false}
-        onPress={() => onToggle(link.id)}
-      />
-      {/* 선택 시 카드 위에 어두운 오버레이 */}
-      {selected && (
-        <View style={styles.selectedOverlay} pointerEvents="none" />
-      )}
-      <View style={styles.checkOverlay} pointerEvents="none">
-        <SelectionCircle selected={selected} />
-      </View>
-    </View>
-  );
-}
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -139,7 +107,7 @@ export default function FolderUrlSelectScreen() {
             data={links}
             keyExtractor={(item) => String(item.id)}
             renderItem={({ item }) => (
-              <SelectableCard
+              <SelectableLinkCard
                 link={item}
                 selected={selectedIds.has(item.id)}
                 onToggle={toggleSelect}
@@ -224,26 +192,6 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 8,
-  },
-
-  // Selectable card
-  cardRow: {
-    position: 'relative',
-    borderRadius: 22,
-    overflow: 'hidden',
-  },
-  selectedOverlay: {
-    position: 'absolute',
-    inset: 0,
-    borderRadius: 22,
-    backgroundColor: Colors.brand.overlaySelected,
-  },
-  checkOverlay: {
-    position: 'absolute',
-    right: 16,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
   },
 
   emptyState: {

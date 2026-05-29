@@ -30,6 +30,7 @@ const styles = StyleSheet.create({
     borderRadius: CIRCLE_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'visible',
   },
   unselected: {
     backgroundColor: Colors.brand.surface,
