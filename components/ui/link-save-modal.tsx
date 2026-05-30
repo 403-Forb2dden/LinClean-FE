@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Keyboard,
   LayoutAnimation,
@@ -61,13 +61,28 @@ export function LinkSaveModal({
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState(initialTitle);
   const [keyboardInset, setKeyboardInset] = useState(0);
+  const titleInputRef = useRef<TextInput>(null);
+  const titleFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const trimmedTitle = title.trim();
   const saveDisabled = loading || trimmedTitle.length === 0;
 
+  const clearTitleFocusTimer = useCallback(() => {
+    if (titleFocusTimerRef.current) {
+      clearTimeout(titleFocusTimerRef.current);
+      titleFocusTimerRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     setTitle(initialTitle);
-  }, [initialTitle, visible]);
+
+    if (!visible) {
+      clearTitleFocusTimer();
+    }
+  }, [clearTitleFocusTimer, initialTitle, visible]);
+
+  useEffect(() => clearTitleFocusTimer, [clearTitleFocusTimer]);
 
   useEffect(() => {
     if (!visible) {
@@ -90,11 +105,30 @@ export function LinkSaveModal({
     };
   }, [visible]);
 
+  const handleCancel = useCallback(() => {
+    if (loading) {
+      return;
+    }
+
+    clearTitleFocusTimer();
+    onCancel();
+  }, [clearTitleFocusTimer, loading, onCancel]);
+
+  const handleModalShow = useCallback(() => {
+    clearTitleFocusTimer();
+
+    titleFocusTimerRef.current = setTimeout(() => {
+      titleInputRef.current?.focus();
+      titleFocusTimerRef.current = null;
+    }, 100);
+  }, [clearTitleFocusTimer]);
+
   const handleSave = () => {
     if (saveDisabled) return;
+    clearTitleFocusTimer();
     onSave(trimmedTitle);
   };
-  const guardedCancel = useGuardedPress(onCancel, { disabled: loading, lockMs: 250 });
+  const guardedCancel = useGuardedPress(handleCancel, { disabled: loading, lockMs: 250 });
   const guardedSave = useGuardedPress(handleSave, { disabled: saveDisabled });
   const guardedClearTitle = useGuardedPress(() => setTitle(''), {
     disabled: loading,
@@ -111,6 +145,7 @@ export function LinkSaveModal({
       transparent
       animationType="slide"
       onRequestClose={guardedCancel}
+      onShow={handleModalShow}
     >
       <View style={[styles.overlay, { paddingBottom: modalBottomInset }]}>
         <Pressable style={styles.backdrop} onPress={guardedCancel} />
@@ -132,6 +167,7 @@ export function LinkSaveModal({
               <Text style={styles.label}>URL 제목</Text>
               <View style={styles.inputRow}>
                 <TextInput
+                  ref={titleInputRef}
                   style={styles.input}
                   value={title}
                   onChangeText={setTitle}
@@ -141,7 +177,6 @@ export function LinkSaveModal({
                   onSubmitEditing={Keyboard.dismiss}
                   maxLength={500}
                   editable={!loading}
-                  autoFocus
                 />
                 {title.length > 0 && !loading && (
                   <TouchableOpacity
