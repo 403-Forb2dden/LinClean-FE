@@ -25,6 +25,7 @@ const dangerBackgroundColor = '#F5C8C8';
 const selectedOverlayColor = 'rgba(0,0,0,0.08)';
 const modalBackdropColor = 'rgba(0,0,0,0.4)';
 const inverseSubtleOverlayColor = 'rgba(255,255,255,0.08)';
+const folderCardBodyColor = '#FAFCFB';
 
 const socialButtonBackgroundColor = '#FFFFFF';
 const socialButtonBorderColor = lineColor;
@@ -90,6 +91,9 @@ export const Colors = {
     },
     folderGradientStart: '#8FE2C6',
     folderGradientEnd: '#499B80',
+    folderCard: {
+      body: folderCardBodyColor,
+    },
   },
   social: {
     buttonBackground: socialButtonBackgroundColor,
@@ -165,3 +169,35 @@ export const Typography = {
   bold12: { fontSize: fontSizeBold12, fontWeight: fontWeightBold },
   regular12: { fontSize: fontSizeRegular12, fontWeight: fontWeightRegular },
 };
+
+export const ComponentTokens = {
+  folderCard: {
+    defaultWidth: 144,
+    height: 128,
+    bodyTop: 16,
+    bodyMinHeight: 112,
+    tabWidth: 72,
+    tabLeft: 10,
+    horizontalPadding: 14,
+    verticalPadding: 18,
+    menuSize: 22,
+    radius: 12,
+    tabRadius: 8,
+    touchHitSlop: 8,
+    pressedScale: 0.98,
+    borderWidth: 1,
+    hiddenBorderWidth: 0,
+    origin: 0,
+    headerGap: 8,
+    folderNameLines: 2,
+    compact: {
+      height: 116,
+      bodyTop: 14,
+      bodyMinHeight: 102,
+      tabWidth: 64,
+      horizontalPadding: 12,
+      verticalPadding: 14,
+      menuSize: 20,
+    },
+  },
+} as const;

@@ -1,32 +1,13 @@
 import { useRef } from 'react';
 import { Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { Colors, Typography } from '@/constants/theme';
+import { Colors, ComponentTokens, Typography } from '@/constants/theme';
 import { useGuardedPress } from '@/utils/press-guard';
 import { IconSymbol } from './icon-symbol';
 
 type FolderCardVariant = 'tabbed' | 'plain';
 
-const DEFAULT_CARD_WIDTH = 144;
-const CARD_HEIGHT = 128;
-const CARD_BODY_TOP = 16;
-const CARD_BODY_MIN_HEIGHT = 112;
-const CARD_TAB_WIDTH = 72;
-const CARD_TAB_LEFT = 10;
-const CARD_HORIZONTAL_PADDING = 14;
-const CARD_VERTICAL_PADDING = 18;
-const CARD_MENU_SIZE = 22;
-const CARD_RADIUS = 12;
-const TAB_RADIUS = 8;
-const TOUCH_HIT_SLOP = 8;
-const COMPACT_CARD_HEIGHT = 116;
-const COMPACT_CARD_BODY_TOP = 14;
-const COMPACT_CARD_BODY_MIN_HEIGHT = 102;
-const COMPACT_CARD_TAB_WIDTH = 64;
-const COMPACT_CARD_HORIZONTAL_PADDING = 12;
-const COMPACT_CARD_VERTICAL_PADDING = 14;
-const COMPACT_CARD_MENU_SIZE = 20;
-const PRESSED_SCALE = 0.98;
+const FOLDER_CARD = ComponentTokens.folderCard;
 
 export interface AnchorPosition {
   x: number;
@@ -57,18 +38,18 @@ export function FolderCard({
   variant = 'tabbed',
 }: FolderCardProps) {
   const moreRef = useRef<View>(null);
-  const cardWidth = width ?? DEFAULT_CARD_WIDTH;
+  const cardWidth = width ?? FOLDER_CARD.defaultWidth;
   const guardedOnPress = useGuardedPress(onPress, { disabled });
   const guardedOnMorePress = useGuardedPress(onMorePress, { disabled });
   const isTabbed = variant === 'tabbed';
-  const isCompact = cardWidth <= DEFAULT_CARD_WIDTH;
-  const cardHeight = isCompact ? COMPACT_CARD_HEIGHT : CARD_HEIGHT;
-  const bodyTop = isCompact ? COMPACT_CARD_BODY_TOP : CARD_BODY_TOP;
-  const bodyMinHeight = isCompact ? COMPACT_CARD_BODY_MIN_HEIGHT : CARD_BODY_MIN_HEIGHT;
-  const tabWidth = isCompact ? COMPACT_CARD_TAB_WIDTH : CARD_TAB_WIDTH;
-  const horizontalPadding = isCompact ? COMPACT_CARD_HORIZONTAL_PADDING : CARD_HORIZONTAL_PADDING;
-  const verticalPadding = isCompact ? COMPACT_CARD_VERTICAL_PADDING : CARD_VERTICAL_PADDING;
-  const menuSize = isCompact ? COMPACT_CARD_MENU_SIZE : CARD_MENU_SIZE;
+  const isCompact = cardWidth <= FOLDER_CARD.defaultWidth;
+  const cardHeight = isCompact ? FOLDER_CARD.compact.height : FOLDER_CARD.height;
+  const bodyTop = isCompact ? FOLDER_CARD.compact.bodyTop : FOLDER_CARD.bodyTop;
+  const bodyMinHeight = isCompact ? FOLDER_CARD.compact.bodyMinHeight : FOLDER_CARD.bodyMinHeight;
+  const tabWidth = isCompact ? FOLDER_CARD.compact.tabWidth : FOLDER_CARD.tabWidth;
+  const horizontalPadding = isCompact ? FOLDER_CARD.compact.horizontalPadding : FOLDER_CARD.horizontalPadding;
+  const verticalPadding = isCompact ? FOLDER_CARD.compact.verticalPadding : FOLDER_CARD.verticalPadding;
+  const menuSize = isCompact ? FOLDER_CARD.compact.menuSize : FOLDER_CARD.menuSize;
 
   const handleMorePress = () => {
     moreRef.current?.measure((_fx, _fy, measuredWidth, measuredHeight, px, py) => {
@@ -123,7 +104,12 @@ export function FolderCard({
               <TouchableOpacity
                 onPress={handleMorePress}
                 disabled={disabled}
-                hitSlop={{ top: TOUCH_HIT_SLOP, bottom: TOUCH_HIT_SLOP, left: TOUCH_HIT_SLOP, right: TOUCH_HIT_SLOP }}
+                hitSlop={{
+                  top: FOLDER_CARD.touchHitSlop,
+                  bottom: FOLDER_CARD.touchHitSlop,
+                  left: FOLDER_CARD.touchHitSlop,
+                  right: FOLDER_CARD.touchHitSlop,
+                }}
                 activeOpacity={0.7}
                 style={styles.moreButton}
               >
@@ -142,7 +128,7 @@ export function FolderCard({
             isCompact && styles.folderNameCompact,
             disabled && styles.folderNameDisabled,
           ]}
-          numberOfLines={2}
+          numberOfLines={FOLDER_CARD.folderNameLines}
         >
           {folderName}
         </Text>
@@ -159,12 +145,12 @@ const styles = StyleSheet.create({
   rootPlain: {},
   tab: {
     position: 'absolute',
-    top: 0,
-    left: CARD_TAB_LEFT,
-    borderTopLeftRadius: TAB_RADIUS,
-    borderTopRightRadius: TAB_RADIUS,
-    borderWidth: 1,
-    borderBottomWidth: 0,
+    top: FOLDER_CARD.origin,
+    left: FOLDER_CARD.tabLeft,
+    borderTopLeftRadius: FOLDER_CARD.tabRadius,
+    borderTopRightRadius: FOLDER_CARD.tabRadius,
+    borderWidth: FOLDER_CARD.borderWidth,
+    borderBottomWidth: FOLDER_CARD.hiddenBorderWidth,
     borderColor: Colors.brand.line,
     backgroundColor: Colors.brand.softMint,
   },
@@ -175,10 +161,10 @@ const styles = StyleSheet.create({
   body: {
     flex: 1,
     justifyContent: 'space-between',
-    borderRadius: CARD_RADIUS,
-    borderWidth: 1,
+    borderRadius: FOLDER_CARD.radius,
+    borderWidth: FOLDER_CARD.borderWidth,
     borderColor: Colors.brand.line,
-    backgroundColor: Colors.brand.surface,
+    backgroundColor: Colors.brand.folderCard.body,
     overflow: 'hidden',
   },
   bodyPlain: {
@@ -186,17 +172,17 @@ const styles = StyleSheet.create({
   },
   bodyDisabled: {
     borderColor: Colors.brand.line,
-    backgroundColor: Colors.brand.surface,
+    backgroundColor: Colors.brand.folderCard.body,
   },
   pressed: {
-    transform: [{ scale: PRESSED_SCALE }],
+    transform: [{ scale: FOLDER_CARD.pressedScale }],
   },
   header: {
-    minHeight: COMPACT_CARD_MENU_SIZE,
+    minHeight: FOLDER_CARD.compact.menuSize,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 8,
+    gap: FOLDER_CARD.headerGap,
   },
   count: {
     ...Typography.body,
@@ -206,8 +192,8 @@ const styles = StyleSheet.create({
     color: Colors.brand.textHint,
   },
   moreButton: {
-    width: CARD_MENU_SIZE,
-    height: CARD_MENU_SIZE,
+    width: FOLDER_CARD.menuSize,
+    height: FOLDER_CARD.menuSize,
     alignItems: 'center',
     justifyContent: 'center',
   },
