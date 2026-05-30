@@ -20,6 +20,14 @@ const CARD_MENU_SIZE = 22;
 const CARD_RADIUS = 12;
 const TAB_RADIUS = 8;
 const TOUCH_HIT_SLOP = 8;
+const COMPACT_CARD_HEIGHT = 116;
+const COMPACT_CARD_BODY_TOP = 14;
+const COMPACT_CARD_BODY_MIN_HEIGHT = 102;
+const COMPACT_CARD_TAB_WIDTH = 64;
+const COMPACT_CARD_TAB_HEIGHT = 26;
+const COMPACT_CARD_HORIZONTAL_PADDING = 12;
+const COMPACT_CARD_VERTICAL_PADDING = 14;
+const COMPACT_CARD_MENU_SIZE = 20;
 
 export interface AnchorPosition {
   x: number;
@@ -54,6 +62,15 @@ export function FolderCard({
   const guardedOnPress = useGuardedPress(onPress, { disabled });
   const guardedOnMorePress = useGuardedPress(onMorePress, { disabled });
   const isTabbed = variant === 'tabbed';
+  const isCompact = cardWidth <= DEFAULT_CARD_WIDTH;
+  const cardHeight = isCompact ? COMPACT_CARD_HEIGHT : CARD_HEIGHT;
+  const bodyTop = isCompact ? COMPACT_CARD_BODY_TOP : CARD_BODY_TOP;
+  const bodyMinHeight = isCompact ? COMPACT_CARD_BODY_MIN_HEIGHT : CARD_BODY_MIN_HEIGHT;
+  const tabWidth = isCompact ? COMPACT_CARD_TAB_WIDTH : CARD_TAB_WIDTH;
+  const tabHeight = isCompact ? COMPACT_CARD_TAB_HEIGHT : CARD_TAB_HEIGHT;
+  const horizontalPadding = isCompact ? COMPACT_CARD_HORIZONTAL_PADDING : CARD_HORIZONTAL_PADDING;
+  const verticalPadding = isCompact ? COMPACT_CARD_VERTICAL_PADDING : CARD_VERTICAL_PADDING;
+  const menuSize = isCompact ? COMPACT_CARD_MENU_SIZE : CARD_MENU_SIZE;
 
   const handleMorePress = () => {
     moreRef.current?.measure((_fx, _fy, measuredWidth, measuredHeight, px, py) => {
@@ -66,7 +83,9 @@ export function FolderCard({
       style={({ pressed }) => [
         styles.root,
         { width: cardWidth },
-        isTabbed ? styles.rootTabbed : styles.rootPlain,
+        isTabbed
+          ? [styles.rootTabbed, { height: cardHeight, paddingTop: bodyTop }]
+          : [styles.rootPlain, { minHeight: bodyMinHeight }],
         pressed && !disabled && styles.pressed,
       ]}
       onPress={guardedOnPress}
@@ -75,12 +94,26 @@ export function FolderCard({
       accessibilityState={{ disabled }}
     >
       {isTabbed ? (
-        <View style={[styles.tab, disabled && styles.tabDisabled]} />
+        <View
+          style={[
+            styles.tab,
+            {
+              width: tabWidth,
+              height: tabHeight,
+            },
+            disabled && styles.tabDisabled,
+          ]}
+        />
       ) : null}
       <View
         style={[
           styles.body,
-          { width: cardWidth },
+          {
+            width: cardWidth,
+            minHeight: bodyMinHeight,
+            paddingHorizontal: horizontalPadding,
+            paddingVertical: verticalPadding,
+          },
           disabled && styles.bodyDisabled,
           !isTabbed && styles.bodyPlain,
         ]}
@@ -98,14 +131,21 @@ export function FolderCard({
               >
                 <IconSymbol
                   name="ellipsis"
-                  size={CARD_MENU_SIZE}
+                  size={menuSize}
                   color={disabled ? Colors.brand.textHint : Colors.brand.textHint}
                 />
               </TouchableOpacity>
             </View>
           ) : null}
         </View>
-        <Text style={[styles.folderName, disabled && styles.folderNameDisabled]} numberOfLines={2}>
+        <Text
+          style={[
+            styles.folderName,
+            isCompact && styles.folderNameCompact,
+            disabled && styles.folderNameDisabled,
+          ]}
+          numberOfLines={2}
+        >
           {folderName}
         </Text>
       </View>
@@ -117,19 +157,12 @@ const styles = StyleSheet.create({
   root: {
     flexShrink: 0,
   },
-  rootTabbed: {
-    height: CARD_HEIGHT,
-    paddingTop: CARD_BODY_TOP,
-  },
-  rootPlain: {
-    minHeight: CARD_BODY_MIN_HEIGHT,
-  },
+  rootTabbed: {},
+  rootPlain: {},
   tab: {
     position: 'absolute',
     top: 0,
     left: CARD_TAB_LEFT,
-    width: CARD_TAB_WIDTH,
-    height: CARD_TAB_HEIGHT,
     borderTopLeftRadius: TAB_RADIUS,
     borderTopRightRadius: TAB_RADIUS,
     borderWidth: 1,
@@ -143,14 +176,11 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
-    minHeight: CARD_BODY_MIN_HEIGHT,
     justifyContent: 'space-between',
     borderRadius: CARD_RADIUS,
     borderWidth: 1,
     borderColor: Colors.brand.line,
     backgroundColor: Colors.brand.surface,
-    paddingHorizontal: CARD_HORIZONTAL_PADDING,
-    paddingVertical: CARD_VERTICAL_PADDING,
     overflow: 'hidden',
   },
   bodyPlain: {
@@ -164,7 +194,7 @@ const styles = StyleSheet.create({
     opacity: 0.82,
   },
   header: {
-    minHeight: CARD_MENU_SIZE,
+    minHeight: COMPACT_CARD_MENU_SIZE,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -186,6 +216,9 @@ const styles = StyleSheet.create({
   folderName: {
     ...Typography.title,
     color: Colors.brand.text,
+  },
+  folderNameCompact: {
+    ...Typography.section,
   },
   folderNameDisabled: {
     color: Colors.brand.textHint,
