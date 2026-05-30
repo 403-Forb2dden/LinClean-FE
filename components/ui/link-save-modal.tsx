@@ -96,6 +96,10 @@ export function LinkSaveModal({
   };
   const guardedCancel = useGuardedPress(onCancel, { disabled: loading, lockMs: 250 });
   const guardedSave = useGuardedPress(handleSave, { disabled: saveDisabled });
+  const guardedClearTitle = useGuardedPress(() => setTitle(''), {
+    disabled: loading,
+    lockMs: 250,
+  });
   const restingBottomInset = Math.max(insets.bottom, MODAL_BOTTOM_GAP);
   const modalBottomInset = keyboardInset > 0
     ? keyboardInset + KEYBOARD_TOP_GAP
@@ -126,18 +130,29 @@ export function LinkSaveModal({
 
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>URL 제목</Text>
-              <TextInput
-                style={styles.input}
-                value={title}
-                onChangeText={setTitle}
-                placeholder="예: 네이버 블로그"
-                placeholderTextColor={Colors.brand.textHint}
-                returnKeyType="done"
-                onSubmitEditing={Keyboard.dismiss}
-                maxLength={500}
-                editable={!loading}
-                autoFocus
-              />
+              <View style={styles.inputRow}>
+                <TextInput
+                  style={styles.input}
+                  value={title}
+                  onChangeText={setTitle}
+                  placeholder="예: 네이버 블로그"
+                  placeholderTextColor={Colors.brand.textHint}
+                  returnKeyType="done"
+                  onSubmitEditing={Keyboard.dismiss}
+                  maxLength={500}
+                  editable={!loading}
+                  autoFocus
+                />
+                {title.length > 0 && !loading && (
+                  <TouchableOpacity
+                    onPress={guardedClearTitle}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={styles.clearButton}
+                  >
+                    <Text style={styles.clearButtonText}>−</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
 
             <View style={styles.fieldGroup}>
@@ -227,15 +242,35 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     color: Colors.brand.text,
   },
-  input: {
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     height: 52,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: Colors.brand.line,
     paddingHorizontal: 18,
+    backgroundColor: Colors.light.background,
+  },
+  input: {
+    flex: 1,
     ...Typography.body,
     color: Colors.brand.text,
-    backgroundColor: Colors.light.background,
+    padding: 0,
+  },
+  clearButton: {
+    marginLeft: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.brand.softMint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clearButtonText: {
+    ...Typography.caption,
+    color: Colors.brand.primary,
+    lineHeight: 16,
   },
   urlBox: {
     height: 52,
