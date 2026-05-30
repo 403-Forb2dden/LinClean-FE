@@ -1,11 +1,25 @@
 import { useRef } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
 import { Colors, Typography } from '@/constants/theme';
 import { useGuardedPress } from '@/utils/press-guard';
-import { AppIcon } from './app-icon';
+import { IconSymbol } from './icon-symbol';
+
+type FolderCardVariant = 'tabbed' | 'plain';
 
 const DEFAULT_CARD_WIDTH = 144;
+const CARD_HEIGHT = 128;
+const CARD_BODY_TOP = 16;
+const CARD_BODY_MIN_HEIGHT = 112;
+const CARD_TAB_WIDTH = 72;
+const CARD_TAB_HEIGHT = 30;
+const CARD_TAB_LEFT = 10;
+const CARD_HORIZONTAL_PADDING = 14;
+const CARD_VERTICAL_PADDING = 18;
+const CARD_MENU_SIZE = 22;
+const CARD_RADIUS = 12;
+const TAB_RADIUS = 8;
+const TOUCH_HIT_SLOP = 8;
 
 export interface AnchorPosition {
   x: number;
@@ -21,6 +35,8 @@ export interface FolderCardProps {
   onPress?: () => void;
   onMorePress?: (anchor: AnchorPosition) => void;
   disabled?: boolean;
+  icon?: boolean;
+  variant?: FolderCardVariant;
 }
 
 export function FolderCard({
@@ -30,11 +46,14 @@ export function FolderCard({
   onPress,
   onMorePress,
   disabled = false,
+  icon = true,
+  variant = 'tabbed',
 }: FolderCardProps) {
   const moreRef = useRef<View>(null);
   const cardWidth = width ?? DEFAULT_CARD_WIDTH;
   const guardedOnPress = useGuardedPress(onPress, { disabled });
   const guardedOnMorePress = useGuardedPress(onMorePress, { disabled });
+  const isTabbed = variant === 'tabbed';
 
   const handleMorePress = () => {
     moreRef.current?.measure((_fx, _fy, measuredWidth, measuredHeight, px, py) => {
@@ -44,55 +63,52 @@ export function FolderCard({
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.root, { width: cardWidth }, pressed && !disabled && styles.pressed]}
+      style={({ pressed }) => [
+        styles.root,
+        { width: cardWidth },
+        isTabbed ? styles.rootTabbed : styles.rootPlain,
+        pressed && !disabled && styles.pressed,
+      ]}
       onPress={guardedOnPress}
       accessibilityRole="button"
       accessibilityLabel={`${folderName} 폴더, ${urlCount}개`}
       accessibilityState={{ disabled }}
     >
-      {disabled ? (
-        <View style={[styles.shadow, styles.shadowDisabled]}>
-          <View style={[styles.cardDisabled, { width: cardWidth }]}>
-            <View style={styles.header}>
-              <Text style={[styles.count, styles.countDisabled]}>{urlCount}개</Text>
-              <View ref={moreRef} collapsable={false}>
-                <AppIcon
-                  name="more"
-                  size={16}
-                  disabled={disabled}
-                  onPress={handleMorePress}
+      {isTabbed ? (
+        <View style={[styles.tab, disabled && styles.tabDisabled]} />
+      ) : null}
+      <View
+        style={[
+          styles.body,
+          { width: cardWidth },
+          disabled && styles.bodyDisabled,
+          !isTabbed && styles.bodyPlain,
+        ]}
+      >
+        <View style={styles.header}>
+          <Text style={[styles.count, disabled && styles.countDisabled]}>{urlCount}개</Text>
+          {icon ? (
+            <View ref={moreRef} collapsable={false}>
+              <TouchableOpacity
+                onPress={handleMorePress}
+                disabled={disabled}
+                hitSlop={{ top: TOUCH_HIT_SLOP, bottom: TOUCH_HIT_SLOP, left: TOUCH_HIT_SLOP, right: TOUCH_HIT_SLOP }}
+                activeOpacity={0.7}
+                style={styles.moreButton}
+              >
+                <IconSymbol
+                  name="ellipsis"
+                  size={CARD_MENU_SIZE}
+                  color={disabled ? Colors.brand.textHint : Colors.brand.textHint}
                 />
-              </View>
+              </TouchableOpacity>
             </View>
-            <Text style={[styles.folderName, styles.folderNameDisabled]} numberOfLines={2}>
-              {folderName}
-            </Text>
-          </View>
+          ) : null}
         </View>
-      ) : (
-        <View style={[styles.shadow, styles.shadowActive]}>
-          <LinearGradient
-            colors={[Colors.brand.folderGradientStart, Colors.brand.folderGradientEnd]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.card, { width: cardWidth }]}
-          >
-            <View style={styles.header}>
-              <Text style={styles.count}>{urlCount}개</Text>
-              <View ref={moreRef} collapsable={false}>
-                <AppIcon
-                  name="more"
-                  size={16}
-                  onPress={handleMorePress}
-                />
-              </View>
-            </View>
-            <Text style={styles.folderName} numberOfLines={2}>
-              {folderName}
-            </Text>
-          </LinearGradient>
-        </View>
-      )}
+        <Text style={[styles.folderName, disabled && styles.folderNameDisabled]} numberOfLines={2}>
+          {folderName}
+        </Text>
+      </View>
     </Pressable>
   );
 }
@@ -101,54 +117,74 @@ const styles = StyleSheet.create({
   root: {
     flexShrink: 0,
   },
-  shadow: {
-    borderRadius: 16,
-    shadowColor: Colors.brand.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+  rootTabbed: {
+    height: CARD_HEIGHT,
+    paddingTop: CARD_BODY_TOP,
   },
-  shadowActive: {
-    backgroundColor: Colors.brand.folderGradientEnd,
+  rootPlain: {
+    minHeight: CARD_BODY_MIN_HEIGHT,
   },
-  shadowDisabled: {
+  tab: {
+    position: 'absolute',
+    top: 0,
+    left: CARD_TAB_LEFT,
+    width: CARD_TAB_WIDTH,
+    height: CARD_TAB_HEIGHT,
+    borderTopLeftRadius: TAB_RADIUS,
+    borderTopRightRadius: TAB_RADIUS,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: Colors.brand.line,
     backgroundColor: Colors.brand.softMint,
   },
-  card: {
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    width: 144,
-    minHeight: 96,
-    justifyContent: 'space-between',
+  tabDisabled: {
+    backgroundColor: Colors.brand.softMint,
+    borderColor: Colors.brand.line,
   },
-  pressed: {
-    opacity: 0.8,
-  },
-  cardDisabled: {
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    width: 144,
-    minHeight: 96,
+  body: {
+    flex: 1,
+    minHeight: CARD_BODY_MIN_HEIGHT,
     justifyContent: 'space-between',
+    borderRadius: CARD_RADIUS,
+    borderWidth: 1,
+    borderColor: Colors.brand.line,
+    backgroundColor: Colors.brand.surface,
+    paddingHorizontal: CARD_HORIZONTAL_PADDING,
+    paddingVertical: CARD_VERTICAL_PADDING,
     overflow: 'hidden',
   },
+  bodyPlain: {
+    flex: 0,
+  },
+  bodyDisabled: {
+    borderColor: Colors.brand.line,
+    backgroundColor: Colors.brand.surface,
+  },
+  pressed: {
+    opacity: 0.82,
+  },
   header: {
+    minHeight: CARD_MENU_SIZE,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    gap: 8,
   },
   count: {
-    ...Typography.regular12,
+    ...Typography.body,
     color: Colors.brand.textSecondary,
   },
   countDisabled: {
     color: Colors.brand.textHint,
   },
+  moreButton: {
+    width: CARD_MENU_SIZE,
+    height: CARD_MENU_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   folderName: {
-    ...Typography.section,
+    ...Typography.title,
     color: Colors.brand.text,
   },
   folderNameDisabled: {
