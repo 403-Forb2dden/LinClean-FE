@@ -12,7 +12,6 @@ const CARD_HEIGHT = 128;
 const CARD_BODY_TOP = 16;
 const CARD_BODY_MIN_HEIGHT = 112;
 const CARD_TAB_WIDTH = 72;
-const CARD_TAB_HEIGHT = 30;
 const CARD_TAB_LEFT = 10;
 const CARD_HORIZONTAL_PADDING = 14;
 const CARD_VERTICAL_PADDING = 18;
@@ -24,10 +23,10 @@ const COMPACT_CARD_HEIGHT = 116;
 const COMPACT_CARD_BODY_TOP = 14;
 const COMPACT_CARD_BODY_MIN_HEIGHT = 102;
 const COMPACT_CARD_TAB_WIDTH = 64;
-const COMPACT_CARD_TAB_HEIGHT = 26;
 const COMPACT_CARD_HORIZONTAL_PADDING = 12;
 const COMPACT_CARD_VERTICAL_PADDING = 14;
 const COMPACT_CARD_MENU_SIZE = 20;
+const PRESSED_SCALE = 0.98;
 
 export interface AnchorPosition {
   x: number;
@@ -67,7 +66,6 @@ export function FolderCard({
   const bodyTop = isCompact ? COMPACT_CARD_BODY_TOP : CARD_BODY_TOP;
   const bodyMinHeight = isCompact ? COMPACT_CARD_BODY_MIN_HEIGHT : CARD_BODY_MIN_HEIGHT;
   const tabWidth = isCompact ? COMPACT_CARD_TAB_WIDTH : CARD_TAB_WIDTH;
-  const tabHeight = isCompact ? COMPACT_CARD_TAB_HEIGHT : CARD_TAB_HEIGHT;
   const horizontalPadding = isCompact ? COMPACT_CARD_HORIZONTAL_PADDING : CARD_HORIZONTAL_PADDING;
   const verticalPadding = isCompact ? COMPACT_CARD_VERTICAL_PADDING : CARD_VERTICAL_PADDING;
   const menuSize = isCompact ? COMPACT_CARD_MENU_SIZE : CARD_MENU_SIZE;
@@ -99,7 +97,7 @@ export function FolderCard({
             styles.tab,
             {
               width: tabWidth,
-              height: tabHeight,
+              height: bodyTop,
             },
             disabled && styles.tabDisabled,
           ]}
@@ -191,7 +189,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.brand.surface,
   },
   pressed: {
-    opacity: 0.82,
+    transform: [{ scale: PRESSED_SCALE }],
   },
   header: {
     minHeight: COMPACT_CARD_MENU_SIZE,
