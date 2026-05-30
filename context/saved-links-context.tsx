@@ -17,6 +17,8 @@ import { getSiteName } from '@/utils/analysis-result-display';
 const DEFAULT_PAGE_SIZE = 50;
 const LOGIN_REQUIRED_MESSAGE =
   '로그인 상태를 확인할 수 없습니다. 다시 로그인한 뒤 시도해주세요.';
+const NETWORK_REQUEST_FAILED_MESSAGE =
+  '네트워크 연결 상태를 확인한 뒤 다시 시도해주세요.';
 
 export interface SavedLink extends SavedLinkResponse {
   description: string;
@@ -28,6 +30,7 @@ interface SavedLinksContextValue {
   isLoading: boolean;
   isLoadingMore: boolean;
   errorMessage: string;
+  bookmarkingLinkIds: ReadonlySet<number>;
   hasNext: boolean;
   nextCursor: string | null;
   refreshLinks: (query?: SavedLinkListQuery) => Promise<void>;
@@ -47,10 +50,14 @@ export function SavedLinksProvider({ children }: { children: React.ReactNode }) 
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [bookmarkingLinkIds, setBookmarkingLinkIds] = useState<ReadonlySet<number>>(
+    () => new Set(),
+  );
   const [hasNext, setHasNext] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const lastQueryRef = useRef<SavedLinkListQuery>({ size: DEFAULT_PAGE_SIZE });
   const getTokenRef = useRef(getToken);
+  const bookmarkingLinkIdsRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     getTokenRef.current = getToken;
@@ -138,7 +145,14 @@ export function SavedLinksProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   const toggleBookmark = useCallback(async (id: number) => {
-    const previousLinks = links;
+    if (bookmarkingLinkIdsRef.current.has(id)) {
+      return;
+    }
+
+    bookmarkingLinkIdsRef.current.add(id);
+    setBookmarkingLinkIds(new Set(bookmarkingLinkIdsRef.current));
+
+    const previousIsBookmarked = links.find((link) => link.id === id)?.isBookmarked;
     setLinks((prev) =>
       prev.map((link) =>
         link.id === id ? { ...link, isBookmarked: !link.isBookmarked } : link,
@@ -153,8 +167,18 @@ export function SavedLinksProvider({ children }: { children: React.ReactNode }) 
         ),
       );
     } catch (error) {
-      setLinks(previousLinks);
+      if (previousIsBookmarked != null) {
+        setLinks((prev) =>
+          prev.map((link) =>
+            link.id === id ? { ...link, isBookmarked: previousIsBookmarked } : link,
+          ),
+        );
+      }
+
       throw error;
+    } finally {
+      bookmarkingLinkIdsRef.current.delete(id);
+      setBookmarkingLinkIds(new Set(bookmarkingLinkIdsRef.current));
     }
   }, [links]);
 
@@ -223,6 +247,7 @@ export function SavedLinksProvider({ children }: { children: React.ReactNode }) 
         isLoading,
         isLoadingMore,
         errorMessage,
+        bookmarkingLinkIds,
         hasNext,
         nextCursor,
         refreshLinks,
@@ -249,6 +274,10 @@ export function getSavedLinkErrorMessage(error: unknown, fallbackMessage: string
   if (error instanceof Error) {
     if (error.message === 'Missing Clerk session token') {
       return LOGIN_REQUIRED_MESSAGE;
+    }
+
+    if (error.message === 'Network request failed') {
+      return NETWORK_REQUEST_FAILED_MESSAGE;
     }
 
     if (error.message) {

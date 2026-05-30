@@ -12,7 +12,7 @@ import { Colors, Typography } from '@/constants/theme';
 import { getSavedLinkErrorMessage, useSavedLinks, type SavedLink } from '@/context/saved-links-context';
 import { useFolders } from '@/context/folders-context';
 import type { AnchorPosition } from '@/components/ui/folder-card';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { showAlert } from '@/utils/guarded-alert';
 
 type MoreMenuState = {
@@ -26,7 +26,7 @@ export default function FolderDetailScreen() {
   const router = useRouter();
   const folderId = Number(id);
 
-  const { links, toggleBookmark, assignCategory, updateTitle } = useSavedLinks();
+  const { links, bookmarkingLinkIds, toggleBookmark, assignCategory, updateTitle } = useSavedLinks();
   const { folders, refreshFolders } = useFolders();
   const folderLinks = links.filter((l) => l.categoryId === folderId);
   const folderName = folders.find((f) => f.id === folderId)?.name ?? '폴더';
@@ -45,6 +45,20 @@ export default function FolderDetailScreen() {
   const handleMore = (linkId: number, anchor: AnchorPosition) => {
     setMenuState({ visible: true, anchor, linkId });
   };
+
+  const handleBookmark = useCallback(
+    async (linkId: number) => {
+      try {
+        await toggleBookmark(linkId);
+      } catch (error) {
+        showAlert(
+          '북마크 변경 실패',
+          getSavedLinkErrorMessage(error, '북마크 상태를 변경하지 못했습니다. 잠시 후 다시 시도해주세요.'),
+        );
+      }
+    },
+    [toggleBookmark],
+  );
 
   const handleDelete = async (linkId: number) => {
     if (deletingFromFolderIdsRef.current.has(linkId)) {
@@ -150,7 +164,8 @@ export default function FolderDetailScreen() {
                 originalUrl={link.originalUrl}
                 finalUrl={link.finalUrl}
                 bookmarked={link.isBookmarked}
-                onBookmark={() => toggleBookmark(link.id)}
+                bookmarkDisabled={bookmarkingLinkIds.has(link.id)}
+                onBookmark={() => handleBookmark(link.id)}
                 onMore={(anchor: AnchorPosition) => handleMore(link.id, anchor)}
               />
             ))}

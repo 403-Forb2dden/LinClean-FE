@@ -60,7 +60,7 @@ export default function HomeScreen() {
   }>();
   const { width: windowWidth } = useWindowDimensions();
   const tabBarHeight = useBottomTabBarHeight();
-  const { links, toggleBookmark, deleteLink, updateTitle } = useSavedLinks();
+  const { links, bookmarkingLinkIds, toggleBookmark, deleteLink, updateTitle } = useSavedLinks();
   const { refreshFolders } = useFolders();
   const [menuState, setMenuState] = useState<{ visible: boolean; anchor?: AnchorPosition; linkId?: number }>({ visible: false });
   const [editingLink, setEditingLink] = useState<SavedLink | null>(null);
@@ -284,9 +284,8 @@ export default function HomeScreen() {
                 originalUrl={link.originalUrl}
                 finalUrl={link.finalUrl}
                 bookmarked={link.isBookmarked}
-                onBookmark={() => {
-                  void handleBookmark(link.id);
-                }}
+                bookmarkDisabled={bookmarkingLinkIds.has(link.id)}
+                onBookmark={() => handleBookmark(link.id)}
                 onMore={(anchor) => handleMore(link.id, anchor)}
               />
             ))}
