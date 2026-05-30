@@ -1,19 +1,44 @@
 import { useEffect, useState } from 'react';
 import {
   Keyboard,
-  KeyboardAvoidingView,
+  LayoutAnimation,
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  type KeyboardEvent,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors, Typography } from '@/constants/theme';
 import { useGuardedPress } from '@/utils/press-guard';
+
+const MODAL_BOTTOM_GAP = 16;
+const KEYBOARD_TOP_GAP = 16;
+
+const showKeyboardEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+const hideKeyboardEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+const syncKeyboardLayoutAnimation = (event: KeyboardEvent) => {
+  if (Platform.OS !== 'ios') {
+    return;
+  }
+
+  const duration = event.duration > 10 ? event.duration : 10;
+
+  LayoutAnimation.configureNext({
+    duration,
+    update: {
+      duration,
+      type: LayoutAnimation.Types[event.easing] || LayoutAnimation.Types.keyboard,
+    },
+  });
+};
 
 interface LinkSaveModalProps {
   visible: boolean;
@@ -33,7 +58,9 @@ export function LinkSaveModal({
   onCancel,
   onSave,
 }: LinkSaveModalProps) {
+  const insets = useSafeAreaInsets();
   const [title, setTitle] = useState(initialTitle);
+  const [keyboardInset, setKeyboardInset] = useState(0);
 
   const trimmedTitle = title.trim();
   const saveDisabled = loading || trimmedTitle.length === 0;
@@ -42,12 +69,37 @@ export function LinkSaveModal({
     setTitle(initialTitle);
   }, [initialTitle, visible]);
 
+  useEffect(() => {
+    if (!visible) {
+      setKeyboardInset(0);
+      return;
+    }
+
+    const showSubscription = Keyboard.addListener(showKeyboardEvent, (event) => {
+      syncKeyboardLayoutAnimation(event);
+      setKeyboardInset(event.endCoordinates.height);
+    });
+    const hideSubscription = Keyboard.addListener(hideKeyboardEvent, (event) => {
+      syncKeyboardLayoutAnimation(event);
+      setKeyboardInset(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [visible]);
+
   const handleSave = () => {
     if (saveDisabled) return;
     onSave(trimmedTitle);
   };
   const guardedCancel = useGuardedPress(onCancel, { disabled: loading, lockMs: 250 });
   const guardedSave = useGuardedPress(handleSave, { disabled: saveDisabled });
+  const restingBottomInset = Math.max(insets.bottom, MODAL_BOTTOM_GAP);
+  const modalBottomInset = keyboardInset > 0
+    ? keyboardInset + KEYBOARD_TOP_GAP
+    : restingBottomInset;
 
   return (
     <Modal
@@ -56,68 +108,71 @@ export function LinkSaveModal({
       animationType="slide"
       onRequestClose={guardedCancel}
     >
-      <KeyboardAvoidingView
-        style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <View style={[styles.overlay, { paddingBottom: modalBottomInset }]}>
         <Pressable style={styles.backdrop} onPress={guardedCancel} />
 
         <View style={styles.sheet}>
-          <View style={styles.handle} />
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.sheetContent}
+          >
+            <View style={styles.handle} />
 
-          <View style={styles.header}>
-            <Text style={styles.title}>링크 저장</Text>
-            <Text style={styles.description}>저장할 URL 제목을 입력해 주세요.</Text>
-          </View>
-
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>URL 제목</Text>
-            <TextInput
-              style={styles.input}
-              value={title}
-              onChangeText={setTitle}
-              placeholder="예: 네이버 블로그"
-              placeholderTextColor={Colors.brand.textHint}
-              returnKeyType="done"
-              onSubmitEditing={Keyboard.dismiss}
-              maxLength={500}
-              editable={!loading}
-              autoFocus
-            />
-          </View>
-
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>검사 대상 URL</Text>
-            <View style={styles.urlBox}>
-              <Text style={styles.urlText} numberOfLines={1} ellipsizeMode="tail">
-                {url}
-              </Text>
+            <View style={styles.header}>
+              <Text style={styles.title}>링크 저장</Text>
+              <Text style={styles.description}>저장할 URL 제목을 입력해 주세요.</Text>
             </View>
-          </View>
 
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={guardedCancel}
-              activeOpacity={0.8}
-              disabled={loading}
-            >
-              <Text style={styles.cancelButtonText}>취소</Text>
-            </TouchableOpacity>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>URL 제목</Text>
+              <TextInput
+                style={styles.input}
+                value={title}
+                onChangeText={setTitle}
+                placeholder="예: 네이버 블로그"
+                placeholderTextColor={Colors.brand.textHint}
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+                maxLength={500}
+                editable={!loading}
+                autoFocus
+              />
+            </View>
 
-            <TouchableOpacity
-              style={[styles.saveButton, saveDisabled && styles.saveButtonDisabled]}
-              onPress={guardedSave}
-              activeOpacity={0.8}
-              disabled={saveDisabled}
-            >
-              <Text style={[styles.saveButtonText, saveDisabled && styles.saveButtonTextDisabled]}>
-                {loading ? '저장 중...' : '저장'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>검사 대상 URL</Text>
+              <View style={styles.urlBox}>
+                <Text style={styles.urlText} numberOfLines={1} ellipsizeMode="tail">
+                  {url}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={guardedCancel}
+                activeOpacity={0.8}
+                disabled={loading}
+              >
+                <Text style={styles.cancelButtonText}>취소</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.saveButton, saveDisabled && styles.saveButtonDisabled]}
+                onPress={guardedSave}
+                activeOpacity={0.8}
+                disabled={saveDisabled}
+              >
+                <Text style={[styles.saveButtonText, saveDisabled && styles.saveButtonTextDisabled]}>
+                  {loading ? '저장 중...' : '저장'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
@@ -133,12 +188,16 @@ const styles = StyleSheet.create({
   },
   sheet: {
     width: '100%',
+    maxHeight: '80%',
     backgroundColor: Colors.light.background,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    paddingTop: 14,
+    overflow: 'hidden',
+  },
+  sheetContent: {
+    paddingTop: 12,
     paddingHorizontal: 24,
-    paddingBottom: 32,
+    paddingBottom: 24,
   },
   handle: {
     alignSelf: 'center',
@@ -146,11 +205,11 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: Colors.brand.line,
-    marginBottom: 30,
+    marginBottom: 22,
   },
   header: {
-    gap: 14,
-    marginBottom: 34,
+    gap: 8,
+    marginBottom: 24,
   },
   title: {
     ...Typography.title,
@@ -161,16 +220,16 @@ const styles = StyleSheet.create({
     color: Colors.brand.textSecondary,
   },
   fieldGroup: {
-    gap: 12,
-    marginBottom: 28,
+    gap: 10,
+    marginBottom: 20,
   },
   label: {
     ...Typography.caption,
     color: Colors.brand.text,
   },
   input: {
-    height: 56,
-    borderRadius: 20,
+    height: 52,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: Colors.brand.line,
     paddingHorizontal: 18,
@@ -179,8 +238,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.background,
   },
   urlBox: {
-    height: 56,
-    borderRadius: 20,
+    height: 52,
+    borderRadius: 18,
     backgroundColor: Colors.brand.background,
     justifyContent: 'center',
     paddingHorizontal: 18,
@@ -193,12 +252,12 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     gap: 14,
-    marginTop: 4,
+    marginTop: 0,
   },
   cancelButton: {
     flex: 1,
-    height: 56,
-    borderRadius: 28,
+    height: 52,
+    borderRadius: 26,
     borderWidth: 1.5,
     borderColor: Colors.brand.primary,
     alignItems: 'center',
@@ -211,8 +270,8 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     flex: 1,
-    height: 56,
-    borderRadius: 28,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.brand.primary,
