@@ -29,7 +29,6 @@ const folderCardBodyColor = surfaceColor;
 
 const socialButtonBackgroundColor = '#FFFFFF';
 const socialButtonBorderColor = lineColor;
-const googleIconColor = '#4285F4';
 const appleButtonBackgroundColor = '#111111';
 const appleButtonTextColor = '#FFFFFF';
 
@@ -89,8 +88,6 @@ export const Colors = {
         accent: textWarningColor,
       },
     },
-    folderGradientStart: '#8FE2C6',
-    folderGradientEnd: '#499B80',
     folderCard: {
       body: folderCardBodyColor,
     },
@@ -98,7 +95,6 @@ export const Colors = {
   social: {
     buttonBackground: socialButtonBackgroundColor,
     buttonBorder: socialButtonBorderColor,
-    googleIcon: googleIconColor,
     appleButtonBackground: appleButtonBackgroundColor,
     appleButtonText: appleButtonTextColor,
   },
@@ -144,6 +140,8 @@ const fontSizeSectionTitle = 20;
 const fontSizeSection = 18;
 const fontSizeProfile = 17;
 const fontSizeBody = 16;
+const fontSizeFolderName = 20;
+const fontSizeFolderNameCompact = 18;
 const fontSizeSummary = 14;
 const fontSizeCaption = 13;
 const fontSizeUrl = 12;
@@ -163,6 +161,8 @@ export const Typography = {
   section: { fontSize: fontSizeSection, fontWeight: fontWeightBold },
   profile: { fontSize: fontSizeProfile, fontWeight: fontWeightBold },
   body: { fontSize: fontSizeBody, fontWeight: fontWeightRegular },
+  folderName: { fontSize: fontSizeFolderName, fontWeight: fontWeightBold },
+  folderNameCompact: { fontSize: fontSizeFolderNameCompact, fontWeight: fontWeightBold },
   summary: { fontSize: fontSizeSummary, fontWeight: fontWeightRegular },
   caption: { fontSize: fontSizeCaption, fontWeight: fontWeightBold },
   url: { fontSize: fontSizeUrl, fontWeight: fontWeightRegular, textDecorationLine: 'underline' as const },
@@ -173,11 +173,8 @@ export const Typography = {
 export const ComponentTokens = {
   folderScreen: {
     contentHorizontalPadding: 24,
-    canvasPaddingHorizontal: 0,
     canvasPaddingVertical: 16,
     canvasGap: 16,
-    canvasRadius: 20,
-    canvasBorderWidth: 0,
     gridGap: 12,
     minTwoColumnCardWidth: 120,
     headerRowGap: 10,
@@ -203,6 +200,10 @@ export const ComponentTokens = {
     origin: 0,
     headerGap: 8,
     folderNameLines: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 1,
     compact: {
       height: 116,
       bodyTop: 14,

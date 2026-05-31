@@ -38,7 +38,6 @@ type MenuState = {
 const FOLDER_SCREEN = ComponentTokens.folderScreen;
 const FOLDER_CARD = ComponentTokens.folderCard;
 const CONTENT_HORIZONTAL_PADDING = FOLDER_SCREEN.contentHorizontalPadding;
-const CANVAS_PADDING_HORIZONTAL = FOLDER_SCREEN.canvasPaddingHorizontal;
 const CANVAS_PADDING_VERTICAL = FOLDER_SCREEN.canvasPaddingVertical;
 const FOLDER_GRID_GAP = FOLDER_SCREEN.gridGap;
 const DEFAULT_FOLDER_CARD_WIDTH = FOLDER_CARD.defaultWidth;
@@ -313,6 +312,7 @@ export default function FolderScreen() {
                   urlCount={folder.linkCount}
                   width={folderCardWidth}
                   variant="plain"
+                  compactFolderName={isCompactWidth}
                   onPress={() => router.push({ pathname: '/(tabs)/(folder)/[id]' as any, params: { id: folder.id } })}
                   onMorePress={(anchor) => handleMorePress(folder.id, anchor)}
                 />
@@ -444,11 +444,11 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    ...Typography.displayMedium,
+    ...Typography.pageTitle,
     color: Colors.brand.text,
   },
   titleCompact: {
-    ...Typography.pageTitle,
+    ...Typography.title,
   },
   subtitle: {
     flex: 1,
@@ -465,11 +465,6 @@ const styles = StyleSheet.create({
   },
 
   canvas: {
-    backgroundColor: Colors.brand.transparent,
-    borderRadius: FOLDER_SCREEN.canvasRadius,
-    borderWidth: FOLDER_SCREEN.canvasBorderWidth,
-    borderColor: Colors.brand.transparent,
-    paddingHorizontal: CANVAS_PADDING_HORIZONTAL,
     paddingVertical: CANVAS_PADDING_VERTICAL,
     gap: FOLDER_SCREEN.canvasGap,
   },

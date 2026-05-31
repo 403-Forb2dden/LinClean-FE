@@ -25,6 +25,7 @@ export interface FolderCardProps {
   disabled?: boolean;
   icon?: boolean;
   variant?: FolderCardVariant;
+  compactFolderName?: boolean;
 }
 
 export function FolderCard({
@@ -36,6 +37,7 @@ export function FolderCard({
   disabled = false,
   icon = true,
   variant = 'tabbed',
+  compactFolderName,
 }: FolderCardProps) {
   const moreRef = useRef<View>(null);
   const cardWidth = width ?? FOLDER_CARD.defaultWidth;
@@ -43,6 +45,7 @@ export function FolderCard({
   const guardedOnMorePress = useGuardedPress(onMorePress, { disabled });
   const isTabbed = variant === 'tabbed';
   const isCompact = cardWidth <= FOLDER_CARD.defaultWidth;
+  const shouldUseCompactFolderName = compactFolderName ?? isCompact;
   const cardHeight = isCompact ? FOLDER_CARD.compact.height : FOLDER_CARD.height;
   const bodyTop = isCompact ? FOLDER_CARD.compact.bodyTop : FOLDER_CARD.bodyTop;
   const bodyMinHeight = isCompact ? FOLDER_CARD.compact.bodyMinHeight : FOLDER_CARD.bodyMinHeight;
@@ -125,7 +128,7 @@ export function FolderCard({
         <Text
           style={[
             styles.folderName,
-            isCompact && styles.folderNameCompact,
+            shouldUseCompactFolderName && styles.folderNameCompact,
             disabled && styles.folderNameDisabled,
           ]}
           numberOfLines={FOLDER_CARD.folderNameLines}
@@ -165,7 +168,11 @@ const styles = StyleSheet.create({
     borderWidth: FOLDER_CARD.borderWidth,
     borderColor: Colors.brand.line,
     backgroundColor: Colors.brand.folderCard.body,
-    overflow: 'hidden',
+    shadowColor: Colors.brand.text,
+    shadowOffset: FOLDER_CARD.shadowOffset,
+    shadowOpacity: FOLDER_CARD.shadowOpacity,
+    shadowRadius: FOLDER_CARD.shadowRadius,
+    elevation: FOLDER_CARD.elevation,
   },
   bodyPlain: {
     flex: 0,
@@ -197,11 +204,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   folderName: {
-    ...Typography.title,
+    ...Typography.folderName,
     color: Colors.brand.text,
   },
   folderNameCompact: {
-    ...Typography.section,
+    ...Typography.folderNameCompact,
   },
   folderNameDisabled: {
     color: Colors.brand.textHint,
