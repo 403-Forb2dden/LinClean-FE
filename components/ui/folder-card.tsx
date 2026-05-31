@@ -97,7 +97,7 @@ export function FolderCard({
           !isTabbed && styles.bodyPlain,
         ]}
       >
-        <View style={styles.header}>
+        <View style={[styles.header, { minHeight: menuSize }]}>
           <Text style={[styles.count, disabled && styles.countDisabled]}>{urlCount}개</Text>
           {icon ? (
             <View ref={moreRef} collapsable={false}>
@@ -178,7 +178,6 @@ const styles = StyleSheet.create({
     transform: [{ scale: FOLDER_CARD.pressedScale }],
   },
   header: {
-    minHeight: FOLDER_CARD.compact.menuSize,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
