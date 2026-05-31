@@ -1,11 +1,13 @@
 import { useRef } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, Typography } from '@/constants/theme';
-import { useGuardedPress } from '@/utils/press-guard';
-import { AppIcon } from './app-icon';
+import { Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const DEFAULT_CARD_WIDTH = 144;
+import { Colors, ComponentTokens, Typography } from '@/constants/theme';
+import { useGuardedPress } from '@/utils/press-guard';
+import { IconSymbol } from './icon-symbol';
+
+type FolderCardVariant = 'tabbed' | 'plain';
+
+const FOLDER_CARD = ComponentTokens.folderCard;
 
 export interface AnchorPosition {
   x: number;
@@ -21,6 +23,9 @@ export interface FolderCardProps {
   onPress?: () => void;
   onMorePress?: (anchor: AnchorPosition) => void;
   disabled?: boolean;
+  icon?: boolean;
+  variant?: FolderCardVariant;
+  compactFolderName?: boolean;
 }
 
 export function FolderCard({
@@ -30,11 +35,24 @@ export function FolderCard({
   onPress,
   onMorePress,
   disabled = false,
+  icon = true,
+  variant = 'tabbed',
+  compactFolderName,
 }: FolderCardProps) {
   const moreRef = useRef<View>(null);
-  const cardWidth = width ?? DEFAULT_CARD_WIDTH;
+  const cardWidth = width ?? FOLDER_CARD.defaultWidth;
   const guardedOnPress = useGuardedPress(onPress, { disabled });
   const guardedOnMorePress = useGuardedPress(onMorePress, { disabled });
+  const isTabbed = variant === 'tabbed';
+  const isCompact = cardWidth <= FOLDER_CARD.defaultWidth;
+  const shouldUseCompactFolderName = compactFolderName ?? isCompact;
+  const cardHeight = isCompact ? FOLDER_CARD.compact.height : FOLDER_CARD.height;
+  const bodyTop = isCompact ? FOLDER_CARD.compact.bodyTop : FOLDER_CARD.bodyTop;
+  const bodyMinHeight = isCompact ? FOLDER_CARD.compact.bodyMinHeight : FOLDER_CARD.bodyMinHeight;
+  const tabWidth = isCompact ? FOLDER_CARD.compact.tabWidth : FOLDER_CARD.tabWidth;
+  const horizontalPadding = isCompact ? FOLDER_CARD.compact.horizontalPadding : FOLDER_CARD.horizontalPadding;
+  const verticalPadding = isCompact ? FOLDER_CARD.compact.verticalPadding : FOLDER_CARD.verticalPadding;
+  const menuSize = isCompact ? FOLDER_CARD.compact.menuSize : FOLDER_CARD.menuSize;
 
   const handleMorePress = () => {
     moreRef.current?.measure((_fx, _fy, measuredWidth, measuredHeight, px, py) => {
@@ -44,55 +62,80 @@ export function FolderCard({
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.root, { width: cardWidth }, pressed && !disabled && styles.pressed]}
+      style={({ pressed }) => [
+        styles.root,
+        { width: cardWidth },
+        isTabbed
+          ? [styles.rootTabbed, { height: cardHeight, paddingTop: bodyTop }]
+          : [styles.rootPlain, { minHeight: bodyMinHeight }],
+        pressed && !disabled && styles.pressed,
+      ]}
       onPress={guardedOnPress}
       accessibilityRole="button"
       accessibilityLabel={`${folderName} 폴더, ${urlCount}개`}
       accessibilityState={{ disabled }}
     >
-      {disabled ? (
-        <View style={[styles.shadow, styles.shadowDisabled]}>
-          <View style={[styles.cardDisabled, { width: cardWidth }]}>
-            <View style={styles.header}>
-              <Text style={[styles.count, styles.countDisabled]}>{urlCount}개</Text>
-              <View ref={moreRef} collapsable={false}>
-                <AppIcon
-                  name="more"
-                  size={16}
-                  disabled={disabled}
-                  onPress={handleMorePress}
+      {isTabbed ? (
+        <View
+          style={[
+            styles.tab,
+            {
+              width: tabWidth,
+              height: bodyTop,
+            },
+            disabled && styles.tabDisabled,
+          ]}
+        />
+      ) : null}
+      <View
+        style={[
+          styles.body,
+          {
+            width: cardWidth,
+            minHeight: bodyMinHeight,
+            paddingHorizontal: horizontalPadding,
+            paddingVertical: verticalPadding,
+          },
+          disabled && styles.bodyDisabled,
+          !isTabbed && styles.bodyPlain,
+        ]}
+      >
+        <View style={[styles.header, { minHeight: menuSize }]}>
+          <Text style={[styles.count, disabled && styles.countDisabled]}>{urlCount}개</Text>
+          {icon ? (
+            <View ref={moreRef} collapsable={false}>
+              <TouchableOpacity
+                onPress={handleMorePress}
+                disabled={disabled}
+                hitSlop={{
+                  top: FOLDER_CARD.touchHitSlop,
+                  bottom: FOLDER_CARD.touchHitSlop,
+                  left: FOLDER_CARD.touchHitSlop,
+                  right: FOLDER_CARD.touchHitSlop,
+                }}
+                activeOpacity={0.7}
+                style={styles.moreButton}
+              >
+                <IconSymbol
+                  name="ellipsis"
+                  size={menuSize}
+                  color={disabled ? Colors.brand.textHint : Colors.brand.textHint}
                 />
-              </View>
+              </TouchableOpacity>
             </View>
-            <Text style={[styles.folderName, styles.folderNameDisabled]} numberOfLines={2}>
-              {folderName}
-            </Text>
-          </View>
+          ) : null}
         </View>
-      ) : (
-        <View style={[styles.shadow, styles.shadowActive]}>
-          <LinearGradient
-            colors={[Colors.brand.folderGradientStart, Colors.brand.folderGradientEnd]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.card, { width: cardWidth }]}
-          >
-            <View style={styles.header}>
-              <Text style={styles.count}>{urlCount}개</Text>
-              <View ref={moreRef} collapsable={false}>
-                <AppIcon
-                  name="more"
-                  size={16}
-                  onPress={handleMorePress}
-                />
-              </View>
-            </View>
-            <Text style={styles.folderName} numberOfLines={2}>
-              {folderName}
-            </Text>
-          </LinearGradient>
-        </View>
-      )}
+        <Text
+          style={[
+            styles.folderName,
+            shouldUseCompactFolderName && styles.folderNameCompact,
+            disabled && styles.folderNameDisabled,
+          ]}
+          numberOfLines={FOLDER_CARD.folderNameLines}
+        >
+          {folderName}
+        </Text>
+      </View>
     </Pressable>
   );
 }
@@ -101,55 +144,71 @@ const styles = StyleSheet.create({
   root: {
     flexShrink: 0,
   },
-  shadow: {
-    borderRadius: 16,
-    shadowColor: Colors.brand.shadow,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  shadowActive: {
-    backgroundColor: Colors.brand.folderGradientEnd,
-  },
-  shadowDisabled: {
+  rootTabbed: {},
+  rootPlain: {},
+  tab: {
+    position: 'absolute',
+    top: FOLDER_CARD.origin,
+    left: FOLDER_CARD.tabLeft,
+    borderTopLeftRadius: FOLDER_CARD.tabRadius,
+    borderTopRightRadius: FOLDER_CARD.tabRadius,
+    borderWidth: FOLDER_CARD.borderWidth,
+    borderBottomWidth: FOLDER_CARD.hiddenBorderWidth,
+    borderColor: Colors.brand.line,
     backgroundColor: Colors.brand.softMint,
   },
-  card: {
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    width: 144,
-    minHeight: 96,
+  tabDisabled: {
+    backgroundColor: Colors.brand.softMint,
+    borderColor: Colors.brand.line,
+  },
+  body: {
+    flex: 1,
     justifyContent: 'space-between',
+    borderRadius: FOLDER_CARD.radius,
+    borderWidth: FOLDER_CARD.borderWidth,
+    borderColor: Colors.brand.line,
+    backgroundColor: Colors.brand.folderCard.body,
+    shadowColor: Colors.brand.text,
+    shadowOffset: FOLDER_CARD.shadowOffset,
+    shadowOpacity: FOLDER_CARD.shadowOpacity,
+    shadowRadius: FOLDER_CARD.shadowRadius,
+    elevation: FOLDER_CARD.elevation,
+  },
+  bodyPlain: {
+    flex: 0,
+  },
+  bodyDisabled: {
+    borderColor: Colors.brand.line,
+    backgroundColor: Colors.brand.folderCard.body,
   },
   pressed: {
-    opacity: 0.8,
-  },
-  cardDisabled: {
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    width: 144,
-    minHeight: 96,
-    justifyContent: 'space-between',
-    overflow: 'hidden',
+    transform: [{ scale: FOLDER_CARD.pressedScale }],
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    gap: FOLDER_CARD.headerGap,
   },
   count: {
-    ...Typography.regular12,
+    ...Typography.body,
     color: Colors.brand.textSecondary,
   },
   countDisabled: {
     color: Colors.brand.textHint,
   },
+  moreButton: {
+    width: FOLDER_CARD.menuSize,
+    height: FOLDER_CARD.menuSize,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   folderName: {
-    ...Typography.section,
+    ...Typography.folderName,
     color: Colors.brand.text,
+  },
+  folderNameCompact: {
+    ...Typography.folderNameCompact,
   },
   folderNameDisabled: {
     color: Colors.brand.textHint,

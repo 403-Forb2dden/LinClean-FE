@@ -11,6 +11,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
   type KeyboardEvent,
 } from 'react-native';
@@ -20,9 +21,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AddFolderButton } from '@/components/ui/add-folder-button';
 import { FolderCard } from '@/components/ui/folder-card';
 import { FolderContextMenu } from '@/components/ui/folder-context-menu';
-import { SectionHeader } from '@/components/ui/section-header';
 import { Toast } from '@/components/ui/toast';
-import { Colors, Typography } from '@/constants/theme';
+import { Colors, ComponentTokens, Typography } from '@/constants/theme';
 import type { AnchorPosition } from '@/components/ui/folder-card';
 import { useSavedLinks } from '@/context/saved-links-context';
 import { getFolderErrorMessage, useFolders } from '@/context/folders-context';
@@ -35,11 +35,13 @@ type MenuState = {
   folderId?: number;
 };
 
-const CONTENT_HORIZONTAL_PADDING = 24;
-const CANVAS_PADDING = 16;
-const FOLDER_GRID_GAP = 12;
-const DEFAULT_FOLDER_CARD_WIDTH = 144;
-const MIN_TWO_COLUMN_CARD_WIDTH = 120;
+const FOLDER_SCREEN = ComponentTokens.folderScreen;
+const FOLDER_CARD = ComponentTokens.folderCard;
+const CONTENT_HORIZONTAL_PADDING = FOLDER_SCREEN.contentHorizontalPadding;
+const CANVAS_PADDING_VERTICAL = FOLDER_SCREEN.canvasPaddingVertical;
+const FOLDER_GRID_GAP = FOLDER_SCREEN.gridGap;
+const DEFAULT_FOLDER_CARD_WIDTH = FOLDER_CARD.defaultWidth;
+const MIN_TWO_COLUMN_CARD_WIDTH = FOLDER_SCREEN.minTwoColumnCardWidth;
 const RENAME_MODAL_BOTTOM_GAP = 16;
 const RENAME_KEYBOARD_TOP_GAP = 8;
 
@@ -65,6 +67,7 @@ const syncKeyboardLayoutAnimation = (event: KeyboardEvent) => {
 export default function FolderScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { width: windowWidth } = useWindowDimensions();
   const tabBarHeight = useBottomTabBarHeight();
   const { folderCreated: folderCreatedParam } = useLocalSearchParams<{
     folderCreated?: string | string[];
@@ -99,6 +102,7 @@ export default function FolderScreen() {
   const renameInputRef = useRef<TextInput>(null);
   const renameFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const folderCreated = typeof folderCreatedParam === 'string' ? folderCreatedParam : undefined;
+  const isCompactWidth = windowWidth < FOLDER_SCREEN.compactWidth;
 
   const folders = useMemo(
     () => rawFolders.map((folder) => ({ ...folder })),
@@ -111,16 +115,10 @@ export default function FolderScreen() {
       return DEFAULT_FOLDER_CARD_WIDTH;
     }
 
-    const defaultTwoColumnWidth = DEFAULT_FOLDER_CARD_WIDTH * 2 + FOLDER_GRID_GAP;
+    const twoColumnCardWidth = Math.floor((availableWidth - FOLDER_GRID_GAP) / 2);
 
-    if (availableWidth >= defaultTwoColumnWidth) {
-      return DEFAULT_FOLDER_CARD_WIDTH;
-    }
-
-    const compactTwoColumnWidth = Math.floor((availableWidth - FOLDER_GRID_GAP) / 2);
-
-    if (compactTwoColumnWidth >= MIN_TWO_COLUMN_CARD_WIDTH) {
-      return compactTwoColumnWidth;
+    if (twoColumnCardWidth >= MIN_TWO_COLUMN_CARD_WIDTH) {
+      return twoColumnCardWidth;
     }
 
     return availableWidth;
@@ -283,17 +281,15 @@ export default function FolderScreen() {
       >
         {/* 상단 헤더 */}
         <View style={styles.header}>
-          <Text style={styles.title}>폴더</Text>
-          <Text style={styles.subtitle}>저장한 링크를 폴더별로 정리해요</Text>
+          <Text style={[styles.title, isCompactWidth && styles.titleCompact]}>폴더</Text>
+          <View style={styles.subtitleRow}>
+            <Text style={styles.subtitle}>저장한 링크를 폴더별로 정리해요</Text>
+            <AddFolderButton onPress={handleAddFolder} />
+          </View>
         </View>
 
         {/* 폴더 캔버스 */}
         <View style={styles.canvas}>
-          <SectionHeader
-            label="내 폴더"
-            rightSlot={<AddFolderButton onPress={handleAddFolder} />}
-          />
-
           {errorMessage ? (
             <View style={styles.errorBox}>
               <Text style={styles.errorText}>{errorMessage}</Text>
@@ -315,6 +311,8 @@ export default function FolderScreen() {
                   folderName={folder.name}
                   urlCount={folder.linkCount}
                   width={folderCardWidth}
+                  variant="plain"
+                  compactFolderName={isCompactWidth}
                   onPress={() => router.push({ pathname: '/(tabs)/(folder)/[id]' as any, params: { id: folder.id } })}
                   onMorePress={(anchor) => handleMorePress(folder.id, anchor)}
                 />
@@ -449,18 +447,26 @@ const styles = StyleSheet.create({
     ...Typography.pageTitle,
     color: Colors.brand.text,
   },
+  titleCompact: {
+    ...Typography.title,
+  },
   subtitle: {
+    flex: 1,
+    flexShrink: 1,
     ...Typography.caption,
     color: Colors.brand.textSecondary,
   },
+  subtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: FOLDER_SCREEN.headerRowGap,
+    marginTop: FOLDER_SCREEN.subtitleRowOffsetTop,
+  },
 
   canvas: {
-    backgroundColor: Colors.brand.surface,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: Colors.brand.line,
-    padding: CANVAS_PADDING,
-    gap: 16,
+    paddingVertical: CANVAS_PADDING_VERTICAL,
+    gap: FOLDER_SCREEN.canvasGap,
   },
   grid: {
     width: '100%',
