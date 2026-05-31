@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -37,13 +38,32 @@ export default function AddLinkScreen() {
   const isCompact = windowWidth < COMPACT_WIDTH || windowHeight <= SHORT_SCREEN_HEIGHT;
   const [isNavigating, setIsNavigating] = useState(false);
   const isNavigatingRef = useRef(false);
+  const urlInputRef = useRef<TextInput>(null);
+  const urlFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearUrlFocusTimer = useCallback(() => {
+    if (urlFocusTimerRef.current) {
+      clearTimeout(urlFocusTimerRef.current);
+      urlFocusTimerRef.current = null;
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
       isNavigatingRef.current = false;
       setIsNavigating(false);
-    }, []),
+
+      clearUrlFocusTimer();
+      urlFocusTimerRef.current = setTimeout(() => {
+        urlInputRef.current?.focus();
+        urlFocusTimerRef.current = null;
+      }, 100);
+
+      return clearUrlFocusTimer;
+    }, [clearUrlFocusTimer]),
   );
+
+  useEffect(() => clearUrlFocusTimer, [clearUrlFocusTimer]);
 
   useEffect(() => {
     const nextSharedUrl = getSharedUrlParam(sharedUrl);
@@ -132,6 +152,7 @@ export default function AddLinkScreen() {
             <View style={[styles.inputRow, isCompact && styles.inputRowCompact]}>
               <View style={[styles.inputWrapper, isCompact && styles.inputWrapperCompact, hasError && styles.inputError]}>
                 <TextInput
+                  ref={urlInputRef}
                   style={styles.input}
                   placeholder="https://example.com"
                   placeholderTextColor={Colors.brand.textHint}
@@ -140,8 +161,8 @@ export default function AddLinkScreen() {
                   autoCapitalize="none"
                   autoCorrect={false}
                   keyboardType="url"
-                  returnKeyType="search"
-                  onSubmitEditing={handleScan}
+                  returnKeyType="done"
+                  onSubmitEditing={Keyboard.dismiss}
                 />
                 {url.length > 0 && (
                   <TouchableOpacity
