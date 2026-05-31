@@ -41,6 +41,7 @@ export default function AddLinkScreen() {
   const isCompact = windowWidth < COMPACT_WIDTH || windowHeight <= SHORT_SCREEN_HEIGHT;
   const [isNavigating, setIsNavigating] = useState(false);
   const isNavigatingRef = useRef(false);
+  const urlRef = useRef(initialSharedUrl);
   const getTokenRef = useRef(getToken);
 
   useEffect(() => {
@@ -61,6 +62,7 @@ export default function AddLinkScreen() {
       return;
     }
 
+    urlRef.current = nextSharedUrl;
     setUrl(nextSharedUrl);
     setError('');
   }, [sharedUrl]);
@@ -101,6 +103,13 @@ export default function AddLinkScreen() {
 
     try {
       const response = await checkSavedLinkUrl(() => getTokenRef.current(), normalizedUrl);
+      const currentNormalizedUrl = normalizeHttpUrlInput(urlRef.current.trim());
+
+      if (currentNormalizedUrl !== normalizedUrl) {
+        isNavigatingRef.current = false;
+        setIsNavigating(false);
+        return;
+      }
 
       if (response.exists) {
         setError('이미 저장된 링크입니다.');
@@ -118,6 +127,7 @@ export default function AddLinkScreen() {
   };
 
   const handleChangeUrl = (value: string) => {
+    urlRef.current = value;
     setUrl(value);
     if (error) setError('');
   };
@@ -125,6 +135,7 @@ export default function AddLinkScreen() {
   const hasError = error.length > 0;
   const scanDisabled = !url.trim() || isNavigating || !isLoaded;
   const guardedClearUrl = useGuardedPress(() => {
+    urlRef.current = '';
     setUrl('');
     setError('');
   }, { lockMs: 250 });
