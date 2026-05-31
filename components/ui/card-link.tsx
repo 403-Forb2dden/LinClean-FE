@@ -19,7 +19,8 @@ export interface CardLinkProps {
   bookmarked?: boolean;
   icon?: boolean;
   disabled?: boolean;
-  onBookmark?: () => void;
+  bookmarkDisabled?: boolean;
+  onBookmark?: () => void | Promise<void>;
   onMore?: (anchor: AnchorPosition) => void;
   onPress?: () => void;
 }
@@ -46,6 +47,7 @@ export function CardLink({
   bookmarked = false,
   icon = true,
   disabled = false,
+  bookmarkDisabled = false,
   onBookmark,
   onMore,
   onPress,
@@ -57,7 +59,8 @@ export function CardLink({
   const normalizedVerdict = verdict && verdict in VERDICT_LABELS ? verdict : undefined;
   const statusLabel = normalizedVerdict ? VERDICT_LABELS[normalizedVerdict] : (getFirstText(label) ?? '결과 없음');
   const statusColors = normalizedVerdict ? VERDICT_COLORS[normalizedVerdict] : undefined;
-  const guardedBookmark = useGuardedPress(onBookmark, { disabled });
+  const isBookmarkDisabled = disabled || bookmarkDisabled;
+  const guardedBookmark = useGuardedPress(onBookmark, { disabled: isBookmarkDisabled });
   const guardedMore = useGuardedPress(onMore, { disabled });
 
   const handleBookmarkPress = (event: GestureResponderEvent) => {
@@ -124,14 +127,19 @@ export function CardLink({
         {icon && (
           <View style={styles.iconRow}>
             <Pressable
-              onPress={disabled ? undefined : handleBookmarkPress}
+              onPress={isBookmarkDisabled ? undefined : handleBookmarkPress}
               hitSlop={8}
-              style={({ pressed }) => pressed && !disabled && styles.pressed}
+              style={({ pressed }) => [
+                pressed && !isBookmarkDisabled && styles.pressed,
+                bookmarkDisabled && styles.bookmarkDisabled,
+              ]}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: isBookmarkDisabled }}
             >
               <IconSymbol
                 name={bookmarked ? 'bookmark.fill' : 'bookmark'}
                 size={18}
-                color={bookmarked ? Colors.brand.primary : disabled ? Colors.brand.textHint : Colors.brand.textSecondary}
+                color={bookmarked ? Colors.brand.primary : isBookmarkDisabled ? Colors.brand.textHint : Colors.brand.textSecondary}
               />
             </Pressable>
             <Pressable
@@ -237,5 +245,8 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.6,
+  },
+  bookmarkDisabled: {
+    opacity: 0.45,
   },
 });
