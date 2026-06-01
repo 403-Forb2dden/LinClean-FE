@@ -33,6 +33,7 @@ export default function SavedLinksScreen() {
     hasNext,
     refreshLinks,
     loadMoreLinks,
+    bookmarkingLinkIds,
     toggleBookmark,
     deleteLink,
     updateTitle,
@@ -227,9 +228,8 @@ export default function SavedLinksScreen() {
             originalUrl={item.originalUrl}
             finalUrl={item.finalUrl}
             bookmarked={item.isBookmarked}
-            onBookmark={() => {
-              void handleBookmark(item.id);
-            }}
+            bookmarkDisabled={bookmarkingLinkIds.has(item.id)}
+            onBookmark={() => handleBookmark(item.id)}
             onMore={(anchor) => openMoreMenu(item, anchor)}
           />
         )}

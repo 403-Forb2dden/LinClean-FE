@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@clerk/expo';
 import { useFocusEffect } from '@react-navigation/native';
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -43,6 +44,15 @@ export default function AddLinkScreen() {
   const isNavigatingRef = useRef(false);
   const urlRef = useRef(initialSharedUrl);
   const getTokenRef = useRef(getToken);
+  const urlInputRef = useRef<TextInput>(null);
+  const urlFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearUrlFocusTimer = useCallback(() => {
+    if (urlFocusTimerRef.current) {
+      clearTimeout(urlFocusTimerRef.current);
+      urlFocusTimerRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     getTokenRef.current = getToken;
@@ -52,8 +62,18 @@ export default function AddLinkScreen() {
     useCallback(() => {
       isNavigatingRef.current = false;
       setIsNavigating(false);
-    }, []),
+
+      clearUrlFocusTimer();
+      urlFocusTimerRef.current = setTimeout(() => {
+        urlInputRef.current?.focus();
+        urlFocusTimerRef.current = null;
+      }, 100);
+
+      return clearUrlFocusTimer;
+    }, [clearUrlFocusTimer]),
   );
+
+  useEffect(() => clearUrlFocusTimer, [clearUrlFocusTimer]);
 
   useEffect(() => {
     const nextSharedUrl = getSharedUrlParam(sharedUrl);
@@ -178,6 +198,7 @@ export default function AddLinkScreen() {
             <View style={[styles.inputRow, isCompact && styles.inputRowCompact]}>
               <View style={[styles.inputWrapper, isCompact && styles.inputWrapperCompact, hasError && styles.inputError]}>
                 <TextInput
+                  ref={urlInputRef}
                   style={styles.input}
                   placeholder="https://example.com"
                   placeholderTextColor={Colors.brand.textHint}
@@ -188,6 +209,7 @@ export default function AddLinkScreen() {
                   keyboardType="url"
                   returnKeyType="search"
                   onSubmitEditing={() => {
+                    Keyboard.dismiss();
                     void handleScan();
                   }}
                 />

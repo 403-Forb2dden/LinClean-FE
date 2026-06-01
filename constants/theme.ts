@@ -25,10 +25,10 @@ const dangerBackgroundColor = '#F5C8C8';
 const selectedOverlayColor = 'rgba(0,0,0,0.08)';
 const modalBackdropColor = 'rgba(0,0,0,0.4)';
 const inverseSubtleOverlayColor = 'rgba(255,255,255,0.08)';
+const folderCardBodyColor = surfaceColor;
 
 const socialButtonBackgroundColor = '#FFFFFF';
 const socialButtonBorderColor = lineColor;
-const googleIconColor = '#4285F4';
 const appleButtonBackgroundColor = '#111111';
 const appleButtonTextColor = '#FFFFFF';
 
@@ -88,13 +88,13 @@ export const Colors = {
         accent: textWarningColor,
       },
     },
-    folderGradientStart: '#8FE2C6',
-    folderGradientEnd: '#499B80',
+    folderCard: {
+      body: folderCardBodyColor,
+    },
   },
   social: {
     buttonBackground: socialButtonBackgroundColor,
     buttonBorder: socialButtonBorderColor,
-    googleIcon: googleIconColor,
     appleButtonBackground: appleButtonBackgroundColor,
     appleButtonText: appleButtonTextColor,
   },
@@ -140,6 +140,8 @@ const fontSizeSectionTitle = 20;
 const fontSizeSection = 18;
 const fontSizeProfile = 17;
 const fontSizeBody = 16;
+const fontSizeFolderName = 20;
+const fontSizeFolderNameCompact = 18;
 const fontSizeSummary = 14;
 const fontSizeCaption = 13;
 const fontSizeUrl = 12;
@@ -159,9 +161,57 @@ export const Typography = {
   section: { fontSize: fontSizeSection, fontWeight: fontWeightBold },
   profile: { fontSize: fontSizeProfile, fontWeight: fontWeightBold },
   body: { fontSize: fontSizeBody, fontWeight: fontWeightRegular },
+  folderName: { fontSize: fontSizeFolderName, fontWeight: fontWeightBold },
+  folderNameCompact: { fontSize: fontSizeFolderNameCompact, fontWeight: fontWeightBold },
   summary: { fontSize: fontSizeSummary, fontWeight: fontWeightRegular },
   caption: { fontSize: fontSizeCaption, fontWeight: fontWeightBold },
   url: { fontSize: fontSizeUrl, fontWeight: fontWeightRegular, textDecorationLine: 'underline' as const },
   bold12: { fontSize: fontSizeBold12, fontWeight: fontWeightBold },
   regular12: { fontSize: fontSizeRegular12, fontWeight: fontWeightRegular },
 };
+
+export const ComponentTokens = {
+  folderScreen: {
+    contentHorizontalPadding: 24,
+    canvasPaddingVertical: 16,
+    canvasGap: 16,
+    gridGap: 12,
+    minTwoColumnCardWidth: 120,
+    headerRowGap: 10,
+    compactWidth: 380,
+    subtitleRowOffsetTop: -2,
+  },
+  folderCard: {
+    defaultWidth: 144,
+    height: 172,
+    bodyTop: 16,
+    bodyMinHeight: 156,
+    tabWidth: 72,
+    tabLeft: 10,
+    horizontalPadding: 18,
+    verticalPadding: 20,
+    menuSize: 22,
+    radius: 12,
+    tabRadius: 8,
+    touchHitSlop: 8,
+    pressedScale: 0.98,
+    borderWidth: 1,
+    hiddenBorderWidth: 0,
+    origin: 0,
+    headerGap: 8,
+    folderNameLines: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 1,
+    compact: {
+      height: 116,
+      bodyTop: 14,
+      bodyMinHeight: 102,
+      tabWidth: 64,
+      horizontalPadding: 12,
+      verticalPadding: 14,
+      menuSize: 20,
+    },
+  },
+} as const;
