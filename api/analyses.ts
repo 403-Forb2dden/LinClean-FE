@@ -29,6 +29,7 @@ export type AnalysisResponse = {
   errorCode?: string;
   errorStage?: number;
   errorMessage?: string;
+  contentAnalysisError?: string;
 };
 
 export type VerdictStatisticsResponse = Record<AnalysisVerdict, number>;

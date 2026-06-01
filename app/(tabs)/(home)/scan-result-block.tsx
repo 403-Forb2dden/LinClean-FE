@@ -11,6 +11,7 @@ import {
   getAnalysisDisplayUrl,
   getAnalysisReasonText,
   getAnalysisResultPath,
+  getContentAnalysisErrorText,
   getRouteParam,
 } from '@/utils/analysis-result-display';
 import { useGuardedPress } from '@/utils/press-guard';
@@ -30,6 +31,7 @@ export default function ScanResultBlockScreen() {
   const { analysis, isLoading, errorMessage } = useAnalysisResult(analysisId);
   const displayUrl = getAnalysisDisplayUrl(analysis, url);
   const reason = getAnalysisReasonText(analysis, getMockScanResultReason('danger'));
+  const contentAnalysisErrorText = getContentAnalysisErrorText(analysis);
   const shouldRedirectToVerdict = Boolean(analysis?.verdict && analysis.verdict !== 'danger');
   const isVerifyingAnalysis = Boolean(analysisId) && !errorMessage && (!analysis?.verdict || isLoading);
   const isCompactResult = windowHeight <= COMPACT_RESULT_HEIGHT;
@@ -107,7 +109,20 @@ export default function ScanResultBlockScreen() {
         {isLoading && <Text style={styles.statusText}>분석 결과를 불러오는 중입니다.</Text>}
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
-        <ScanResultReason reason={reason} style={[styles.reasonCard, isCompactResult && styles.reasonCardCompact]} />
+        <ScanResultReason
+          reason={reason}
+          style={[
+            styles.reasonCard,
+            isCompactResult && styles.reasonCardCompact,
+            Boolean(contentAnalysisErrorText) && styles.reasonCardWithNotice,
+          ]}
+        />
+
+        <ScanResultReason
+          label="페이지 접근 안내"
+          reason={contentAnalysisErrorText}
+          style={[styles.noticeCard, isCompactResult && styles.noticeCardCompact]}
+        />
 
         {/* 검사 대상 카드 */}
         <View style={[styles.card, isCompactResult && styles.cardCompact]}>
@@ -169,7 +184,16 @@ const styles = StyleSheet.create({
   reasonCard: {
     marginBottom: 24,
   },
+  reasonCardWithNotice: {
+    marginBottom: 12,
+  },
   reasonCardCompact: {
+    marginBottom: 16,
+  },
+  noticeCard: {
+    marginBottom: 24,
+  },
+  noticeCardCompact: {
     marginBottom: 16,
   },
   statusText: {

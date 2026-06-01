@@ -3,17 +3,18 @@ import { Colors, Typography } from '@/constants/theme';
 
 interface ScanResultReasonProps {
   reason: string;
+  label?: string;
   style?: StyleProp<ViewStyle>;
 }
 
-export function ScanResultReason({ reason, style }: ScanResultReasonProps) {
+export function ScanResultReason({ reason, label = '판정 이유', style }: ScanResultReasonProps) {
   const normalizedReason = reason.trim();
 
   if (!normalizedReason) return null;
 
   return (
     <View style={[styles.container, style]}>
-      <Text style={styles.label}>판정 이유</Text>
+      <Text style={styles.label}>{label}</Text>
       <Text style={styles.reason} numberOfLines={4}>
         {normalizedReason}
       </Text>

@@ -19,6 +19,10 @@ const VERY_SHORT_SCREEN_HEIGHT = 700;
 const DEFAULT_ANIMATION_SIZE = 280;
 const SHORT_ANIMATION_SIZE = 216;
 const VERY_SHORT_ANIMATION_SIZE = 188;
+const PAGE_UNAVAILABLE_ERROR_CODE = 'PAGE_UNAVAILABLE';
+const PAGE_UNAVAILABLE_DEFAULT_MESSAGE = '페이지에 연결할 수 없습니다.';
+const PAGE_UNAVAILABLE_HELP_MESSAGE =
+  '사이트 접속이 제한되었거나 일시적으로 응답하지 않을 수 있습니다.';
 
 export default function ScanningScreen() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
@@ -316,7 +320,7 @@ function handleAnalysisResult(
   }
 
   if (analysis.status === 'failed') {
-    throw new Error(analysis.errorMessage || 'ANALYSIS_FAILED');
+    throw new Error(getFailedAnalysisErrorMessage(analysis));
   }
 
   if (!analysis.verdict) {
@@ -408,6 +412,32 @@ function getAnalysisErrorMessage(error: unknown) {
   }
 
   return '링크 검사에 실패했습니다. 잠시 후 다시 시도해주세요.';
+}
+
+function getFailedAnalysisErrorMessage(analysis: AnalysisResponse) {
+  if (analysis.errorCode === PAGE_UNAVAILABLE_ERROR_CODE) {
+    return getPageUnavailableErrorMessage(analysis.errorMessage);
+  }
+
+  return analysis.errorMessage?.trim() || 'ANALYSIS_FAILED';
+}
+
+function getPageUnavailableErrorMessage(errorMessage?: string) {
+  const normalizedMessage = errorMessage?.trim();
+
+  if (!normalizedMessage || isTechnicalErrorCode(normalizedMessage)) {
+    return `${PAGE_UNAVAILABLE_DEFAULT_MESSAGE}\n${PAGE_UNAVAILABLE_HELP_MESSAGE}`;
+  }
+
+  if (normalizedMessage.includes(PAGE_UNAVAILABLE_HELP_MESSAGE)) {
+    return normalizedMessage;
+  }
+
+  return `${normalizedMessage}\n${PAGE_UNAVAILABLE_HELP_MESSAGE}`;
+}
+
+function isTechnicalErrorCode(value: string) {
+  return /^[A-Z0-9_]+$/.test(value) || /^[a-z0-9_]+$/.test(value);
 }
 
 function getUrlParam(value: string | string[] | undefined) {
