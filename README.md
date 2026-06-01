@@ -135,16 +135,13 @@ LinClean/
 │   └── use-theme-color.ts                    # 현재 테마에 맞는 색상 값을 반환하는 헬퍼
 │
 ├── assets/                                   # 정적 에셋
-│   ├── images/                               # 앱 아이콘, 스플래시, 로그인/폴더 이미지 리소스
+│   ├── images/                               # 앱 아이콘, 스플래시, 로그인 이미지 리소스
 │   │   ├── icon.png                          # iOS/기본 앱 아이콘
 │   │   ├── favicon.png                       # 웹 파비콘
 │   │   ├── splash-icon.png                   # 스플래시 스크린 이미지
 │   │   ├── android-icon-*.png                # Android 적응형 아이콘
-│   │   ├── ic_kakao.png                      # 카카오 로그인 버튼 아이콘
-│   │   ├── login_wordmark.png                # 로그인 화면 LinClean 워드마크
-│   │   ├── folder_active.png                 # 활성 폴더 탭/카드 아이콘
-│   │   ├── folder_unactive.png               # 비활성 폴더 탭/카드 아이콘
-│   │   └── react-logo*.png                   # Expo 템플릿 데모 이미지
+│   │   ├── ic_google.png                     # Google 로그인 버튼 아이콘
+│   │   └── login_wordmark.png                # 로그인 화면 LinClean 워드마크
 │   └── animations/
 │       └── scanning.json                     # 스캔 진행 화면 애니메이션 에셋
 │
