@@ -1,5 +1,8 @@
 import type { AnalysisResponse, AnalysisVerdict } from '@/api/analyses';
 
+const DEFAULT_CONTENT_ANALYSIS_ERROR_MESSAGE =
+  '페이지 내용을 가져오지 못했어요. 사이트 접속이 제한되었거나 일시적으로 응답하지 않을 수 있습니다.';
+
 export function getRouteParam(value: string | string[] | undefined) {
   return typeof value === 'string' ? value : undefined;
 }
@@ -34,6 +37,20 @@ export function getAnalysisReasonText(
   return fallbackReason;
 }
 
+export function getContentAnalysisErrorText(analysis: AnalysisResponse | null) {
+  const contentAnalysisError = analysis?.contentAnalysisError?.trim();
+
+  if (!contentAnalysisError) {
+    return '';
+  }
+
+  if (isTechnicalErrorCode(contentAnalysisError)) {
+    return DEFAULT_CONTENT_ANALYSIS_ERROR_MESSAGE;
+  }
+
+  return `페이지 내용을 가져오지 못했어요. ${contentAnalysisError}`;
+}
+
 export function getAnalysisResultPath(verdict: AnalysisVerdict) {
   switch (verdict) {
     case 'safe':
@@ -51,4 +68,8 @@ export function getSiteName(url: string) {
   } catch {
     return '정보 없음';
   }
+}
+
+function isTechnicalErrorCode(value: string) {
+  return /^[A-Z0-9_]+$/.test(value) || /^[a-z0-9_]+$/.test(value);
 }

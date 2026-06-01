@@ -14,6 +14,7 @@ import {
   getAnalysisFinalUrl,
   getAnalysisReasonText,
   getAnalysisResultPath,
+  getContentAnalysisErrorText,
   getRouteParam,
 } from '@/utils/analysis-result-display';
 import { showAlert } from '@/utils/guarded-alert';
@@ -36,6 +37,7 @@ export default function ScanResultCautionScreen() {
   const displayUrl = getAnalysisDisplayUrl(analysis, url);
   const finalUrl = getAnalysisFinalUrl(analysis, displayUrl);
   const reason = getAnalysisReasonText(analysis, getMockScanResultReason('caution'));
+  const contentAnalysisErrorText = getContentAnalysisErrorText(analysis);
   const [saveModalVisible, setSaveModalVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const isSavingRef = useRef(false);
@@ -167,7 +169,20 @@ export default function ScanResultCautionScreen() {
         {isLoading && <Text style={styles.statusText}>분석 결과를 불러오는 중입니다.</Text>}
         {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
-        <ScanResultReason reason={reason} style={[styles.reasonCard, isCompactResult && styles.reasonCardCompact]} />
+        <ScanResultReason
+          reason={reason}
+          style={[
+            styles.reasonCard,
+            isCompactResult && styles.reasonCardCompact,
+            Boolean(contentAnalysisErrorText) && styles.reasonCardWithNotice,
+          ]}
+        />
+
+        <ScanResultReason
+          label="페이지 접근 안내"
+          reason={contentAnalysisErrorText}
+          style={[styles.noticeCard, isCompactResult && styles.noticeCardCompact]}
+        />
 
         {/* 검사 대상 카드 */}
         <View style={[styles.card, isCompactResult && styles.cardCompact]}>
@@ -254,7 +269,16 @@ const styles = StyleSheet.create({
   reasonCard: {
     marginBottom: 24,
   },
+  reasonCardWithNotice: {
+    marginBottom: 12,
+  },
   reasonCardCompact: {
+    marginBottom: 16,
+  },
+  noticeCard: {
+    marginBottom: 24,
+  },
+  noticeCardCompact: {
     marginBottom: 16,
   },
   statusText: {
