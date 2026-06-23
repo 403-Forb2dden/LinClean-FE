@@ -10,7 +10,15 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.dkdododo.LinClean"
+      "bundleIdentifier": "com.dkdododo.LinClean",
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.dkdododo.linclean.shareextension"
+        ]
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -38,6 +46,7 @@
             "NSExtensionActivationSupportsWebPageWithMaxCount": 1
           },
           "iosShareExtensionName": "LinCleanShareExtension",
+          "iosAppGroupIdentifier": "group.com.dkdododo.linclean.shareextension",
           "androidIntentFilters": [
             "text/*"
           ]
@@ -58,7 +67,24 @@
         }
       ],
       "@clerk/expo",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "extraPods": [
+              {
+                "name": "GoogleUtilities",
+                "modular_headers": true
+              },
+              {
+                "name": "RecaptchaInterop",
+                "modular_headers": true
+              }
+            ]
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
