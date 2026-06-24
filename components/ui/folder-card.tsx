@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TouchableOpacity, View, type GestureResponderEvent } from 'react-native';
 
 import { Colors, ComponentTokens, Typography } from '@/constants/theme';
 import { useGuardedPress } from '@/utils/press-guard';
@@ -54,9 +54,24 @@ export function FolderCard({
   const verticalPadding = isCompact ? FOLDER_CARD.compact.verticalPadding : FOLDER_CARD.verticalPadding;
   const menuSize = isCompact ? FOLDER_CARD.compact.menuSize : FOLDER_CARD.menuSize;
 
-  const handleMorePress = () => {
-    moreRef.current?.measure((_fx, _fy, measuredWidth, measuredHeight, px, py) => {
-      guardedOnMorePress?.({ x: px, y: py, width: measuredWidth, height: measuredHeight });
+  const handleMorePress = (event: GestureResponderEvent) => {
+    event.stopPropagation();
+
+    const { pageX, pageY } = event.nativeEvent;
+    const fallbackAnchor = { x: pageX, y: pageY, width: 1, height: 1 };
+
+    if (!moreRef.current) {
+      guardedOnMorePress?.(fallbackAnchor);
+      return;
+    }
+
+    moreRef.current.measure((_fx, _fy, measuredWidth, measuredHeight, px, py) => {
+      const measuredAnchor = { x: px, y: py, width: measuredWidth, height: measuredHeight };
+      const anchor = Number.isFinite(px) && Number.isFinite(py) && measuredWidth > 0 && measuredHeight > 0
+        ? measuredAnchor
+        : fallbackAnchor;
+
+      guardedOnMorePress?.(anchor);
     });
   };
 

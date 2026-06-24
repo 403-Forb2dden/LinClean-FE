@@ -5,9 +5,11 @@ import {
   Text,
   View,
 } from 'react-native';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { SelectableLinkCard } from '@/components/ui/selectable-link-card';
 import { Colors, Typography } from '@/constants/theme';
 import { getFolderErrorMessage, useFolders } from '@/context/folders-context';
@@ -68,25 +70,17 @@ export default function FolderAddUrlScreen() {
   const selectedCount = selectedIds.size;
   const name = folderName ?? '폴더';
 
-  return (
-    <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: 'URL 추가',
-          headerBackTitle: '',
-          headerTransparent: false,
-          headerStyle: { backgroundColor: Colors.brand.background },
-          headerTitleStyle: {
-            ...Typography.title,
-            color: Colors.brand.text,
-          },
-          headerTintColor: Colors.brand.text,
-          headerShadowVisible: false,
-        }}
-      />
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace({ pathname: '/(tabs)/(folder)/[id]', params: { id: folderId } });
+    }
+  };
 
-      <View style={styles.container}>
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScreenHeader title="URL 추가" onBack={handleBack} />
         {/* ── 폴더명 표시 ── */}
         <View style={styles.folderNameRow}>
           <Text style={styles.folderNameLabel}>추가할 폴더</Text>
@@ -138,8 +132,7 @@ export default function FolderAddUrlScreen() {
             />
           </View>
         </View>
-      </View>
-    </>
+    </SafeAreaView>
   );
 }
 
