@@ -12,8 +12,9 @@ import { Colors, Typography } from '@/constants/theme';
 import { getSavedLinkErrorMessage, useSavedLinks, type SavedLink } from '@/context/saved-links-context';
 import { useFolders } from '@/context/folders-context';
 import type { AnchorPosition } from '@/components/ui/folder-card';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { showAlert } from '@/utils/guarded-alert';
+import { logPerformanceSummary, measurePerformance } from '@/utils/performance-trace';
 
 type MoreMenuState = {
   visible: boolean;
@@ -22,13 +23,21 @@ type MoreMenuState = {
 };
 
 export default function FolderDetailScreen() {
-  const { id, urlAdded } = useLocalSearchParams<{ id: string; urlAdded?: string }>();
+  const { id, urlAdded, addedLinkIds } = useLocalSearchParams<{
+    id: string;
+    urlAdded?: string;
+    addedLinkIds?: string | string[];
+  }>();
   const router = useRouter();
   const folderId = Number(id);
 
   const { links, bookmarkingLinkIds, toggleBookmark, assignCategory, updateTitle } = useSavedLinks();
   const { folders, refreshFolders } = useFolders();
-  const folderLinks = links.filter((l) => l.categoryId === folderId);
+  const folderLinks = useMemo(
+    () => links.filter((link) => link.categoryId === folderId),
+    [folderId, links],
+  );
+  const addedLinkIdList = useMemo(() => parseAddedLinkIds(addedLinkIds), [addedLinkIds]);
   const folderName = folders.find((f) => f.id === folderId)?.name ?? '폴더';
 
   const [menuState, setMenuState] = useState<MoreMenuState>({ visible: false });
@@ -37,10 +46,41 @@ export default function FolderDetailScreen() {
   const [addToastVisible, setAddToastVisible] = useState(false);
   const [titleToastVisible, setTitleToastVisible] = useState(false);
   const deletingFromFolderIdsRef = useRef<Set<number>>(new Set());
+  const measuredAddedLinksRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (urlAdded === '1') setAddToastVisible(true);
+    if (urlAdded !== '1') {
+      return;
+    }
+
+    measurePerformance('folder_detail_screen_visible', 'folder_detail_navigation_started');
+    setAddToastVisible(true);
   }, [urlAdded]);
+
+  useEffect(() => {
+    if (urlAdded !== '1' || addedLinkIdList.length === 0) {
+      return;
+    }
+
+    const measurementKey = addedLinkIdList.join(',');
+    if (measuredAddedLinksRef.current === measurementKey) {
+      return;
+    }
+
+    const folderLinkIds = new Set(folderLinks.map((link) => link.id));
+    const allAddedLinksVisible = addedLinkIdList.every((linkId) => folderLinkIds.has(linkId));
+    if (!allAddedLinksVisible) {
+      return;
+    }
+
+    measuredAddedLinksRef.current = measurementKey;
+    measurePerformance('folder_added_links_visible', 'folder_add_button_pressed');
+    logPerformanceSummary('folder_add_url_flow_after', [
+      'folder_assign_completed',
+      'folder_detail_screen_visible',
+      'folder_added_links_visible',
+    ]);
+  }, [addedLinkIdList, folderLinks, urlAdded]);
 
   const handleMore = (linkId: number, anchor: AnchorPosition) => {
     setMenuState({ visible: true, anchor, linkId });
@@ -292,3 +332,15 @@ const styles = StyleSheet.create({
     color: Colors.brand.textHint,
   },
 });
+
+function parseAddedLinkIds(value: string | string[] | undefined) {
+  const rawValue = Array.isArray(value) ? value[0] : value;
+  if (!rawValue) {
+    return [];
+  }
+
+  return rawValue
+    .split(',')
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item));
+}
