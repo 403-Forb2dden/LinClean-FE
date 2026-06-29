@@ -12,7 +12,6 @@ import { checkSavedLinkUrl } from '@/api/saved-links';
 import { Colors, Typography } from '@/constants/theme';
 import { AppIcon } from '@/components/ui/app-icon';
 import { useAnalysisResultCache } from '@/context/analysis-result-cache-context';
-import { markPerformance, measurePerformance } from '@/utils/performance-trace';
 import { useGuardedPress } from '@/utils/press-guard';
 
 const POLLING_INTERVAL_MS = 2_000;
@@ -117,7 +116,6 @@ export default function ScanningScreen() {
       };
     }
 
-    measurePerformance('scan_button_to_scanning_screen', 'scan_button_pressed');
     setErrorMessage('');
     setScanStepMessage(SCAN_STEP_MESSAGES.checkingDuplicate);
     screenTimeoutId = setTimeout(handleScreenTimeout, SCAN_SCREEN_TIMEOUT_MS);
@@ -306,19 +304,15 @@ async function runAnalysisPolling({
   onNavigate: () => void;
 }) {
   const deadline = Date.now() + SCAN_SCREEN_TIMEOUT_MS;
-  markPerformance('saved_link_duplicate_check_started');
   onStep(SCAN_STEP_MESSAGES.checkingDuplicate);
   const savedLinkCheck = await checkSavedLinkUrl(getToken, url, { signal });
-  measurePerformance('saved_link_duplicate_check_completed', 'saved_link_duplicate_check_started');
 
   if (savedLinkCheck.exists) {
     throw new Error('DUPLICATE_SAVED_LINK');
   }
 
-  markPerformance('analysis_request_started');
   onStep(SCAN_STEP_MESSAGES.requestingAnalysis);
   let analysis = await requestAnalysis(getToken, url, { signal });
-  measurePerformance('analysis_request_completed', 'analysis_request_started');
 
   while (!signal.aborted) {
     const handled = handleAnalysisResult(
@@ -367,7 +361,6 @@ function handleAnalysisResult(
   }
 
   if (!signal.aborted && canNavigate()) {
-    markPerformance('analysis_result_received');
     onResolvedAnalysis(analysis);
     onNavigate();
     router.replace({

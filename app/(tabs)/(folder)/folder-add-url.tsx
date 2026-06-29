@@ -13,7 +13,6 @@ import { Colors, Typography } from '@/constants/theme';
 import { getFolderErrorMessage, useFolders } from '@/context/folders-context';
 import { useSavedLinks } from '@/context/saved-links-context';
 import { showAlert } from '@/utils/guarded-alert';
-import { markPerformance, measurePerformance } from '@/utils/performance-trace';
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -49,29 +48,16 @@ export default function FolderAddUrlScreen() {
     const selectedLinkIds = [...selectedIds];
     isAddingRef.current = true;
     setIsAdding(true);
-    markPerformance('folder_add_button_pressed');
     try {
-      markPerformance('folder_assign_started');
       await assignCategory(selectedLinkIds, Number(folderId));
-      measurePerformance('folder_assign_completed', 'folder_assign_started');
-      markPerformance('folder_detail_navigation_started');
       router.replace({
         pathname: '/(tabs)/(folder)/[id]',
         params: {
           id: folderId,
           urlAdded: '1',
-          addedLinkIds: selectedLinkIds.join(','),
         },
       });
-      markPerformance('folder_refresh_after_navigation_started');
-      void refreshFolders()
-        .catch(() => undefined)
-        .finally(() => {
-          measurePerformance(
-            'folder_refresh_completed_after_navigation',
-            'folder_refresh_after_navigation_started',
-          );
-        });
+      void refreshFolders().catch(() => undefined);
     } catch (error) {
       showAlert(
         'URL 추가 실패',

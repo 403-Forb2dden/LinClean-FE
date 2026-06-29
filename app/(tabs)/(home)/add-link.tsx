@@ -16,7 +16,6 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 
 import { ScanButton } from '@/components/ui/scan-button';
 import { Colors, Typography } from '@/constants/theme';
-import { markPerformance } from '@/utils/performance-trace';
 import { useGuardedPress } from '@/utils/press-guard';
 import { normalizeHttpUrlInput } from '@/utils/shared-url';
 
@@ -116,7 +115,6 @@ export default function AddLinkScreen() {
     isNavigatingRef.current = true;
     setIsNavigating(true);
 
-    markPerformance('scan_button_pressed');
     router.push({ pathname: '/(tabs)/(home)/scanning', params: { url: normalizedUrl } });
   };
 
