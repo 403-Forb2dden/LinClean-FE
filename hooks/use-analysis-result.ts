@@ -3,14 +3,17 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { fetchAnalysis, type AnalysisResponse } from '@/api/analyses';
 import { ApiError } from '@/api/api-client';
+import { useAnalysisResultCache } from '@/context/analysis-result-cache-context';
 
 const LOGIN_REQUIRED_MESSAGE =
   '로그인 상태를 확인할 수 없습니다. 다시 로그인한 뒤 시도해주세요.';
 
 export function useAnalysisResult(analysisId?: string) {
   const { getToken, isLoaded, isSignedIn } = useAuth();
-  const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const { getAnalysisResult, setAnalysisResult } = useAnalysisResultCache();
+  const cachedAnalysis = getAnalysisResult(analysisId);
+  const [analysis, setAnalysis] = useState<AnalysisResponse | null>(cachedAnalysis);
+  const [isLoading, setIsLoading] = useState(Boolean(analysisId && !cachedAnalysis));
   const [errorMessage, setErrorMessage] = useState('');
   const getTokenRef = useRef(getToken);
 
@@ -22,6 +25,15 @@ export function useAnalysisResult(analysisId?: string) {
     async (signal?: AbortSignal) => {
       if (!analysisId) {
         setAnalysis(null);
+        setIsLoading(false);
+        setErrorMessage('');
+        return;
+      }
+
+      const nextCachedAnalysis = getAnalysisResult(analysisId);
+
+      if (nextCachedAnalysis) {
+        setAnalysis(nextCachedAnalysis);
         setIsLoading(false);
         setErrorMessage('');
         return;
@@ -54,6 +66,7 @@ export function useAnalysisResult(analysisId?: string) {
         }
 
         setAnalysis(nextAnalysis);
+        setAnalysisResult(nextAnalysis);
       } catch (error) {
         if (signal?.aborted) {
           return;
@@ -70,7 +83,7 @@ export function useAnalysisResult(analysisId?: string) {
         }
       }
     },
-    [analysisId, isLoaded, isSignedIn],
+    [analysisId, getAnalysisResult, isLoaded, isSignedIn, setAnalysisResult],
   );
 
   useEffect(() => {
@@ -85,12 +98,19 @@ export function useAnalysisResult(analysisId?: string) {
       return;
     }
 
+    if (cachedAnalysis) {
+      setAnalysis(cachedAnalysis);
+      setIsLoading(false);
+      setErrorMessage('');
+      return;
+    }
+
     const abortController = new AbortController();
 
     void loadAnalysis(abortController.signal);
 
     return () => abortController.abort();
-  }, [analysisId, isLoaded, loadAnalysis]);
+  }, [analysisId, cachedAnalysis, isLoaded, loadAnalysis]);
 
   return {
     analysis,

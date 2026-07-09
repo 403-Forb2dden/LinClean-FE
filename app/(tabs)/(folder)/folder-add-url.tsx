@@ -45,15 +45,19 @@ export default function FolderAddUrlScreen() {
 
   const handleAdd = async () => {
     if (isAddingRef.current || selectedIds.size === 0) return;
+    const selectedLinkIds = [...selectedIds];
     isAddingRef.current = true;
     setIsAdding(true);
     try {
-      await assignCategory([...selectedIds], Number(folderId));
-      await refreshFolders();
+      await assignCategory(selectedLinkIds, Number(folderId));
       router.replace({
         pathname: '/(tabs)/(folder)/[id]',
-        params: { id: folderId, urlAdded: '1' },
+        params: {
+          id: folderId,
+          urlAdded: '1',
+        },
       });
+      void refreshFolders().catch(() => undefined);
     } catch (error) {
       showAlert(
         'URL 추가 실패',

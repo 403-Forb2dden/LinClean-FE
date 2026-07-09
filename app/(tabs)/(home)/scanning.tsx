@@ -8,8 +8,10 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 
 import { fetchAnalysis, requestAnalysis, type AnalysisResponse, type AnalysisVerdict } from '@/api/analyses';
 import { ApiError } from '@/api/api-client';
+import { checkSavedLinkUrl } from '@/api/saved-links';
 import { Colors, Typography } from '@/constants/theme';
 import { AppIcon } from '@/components/ui/app-icon';
+import { useAnalysisResultCache } from '@/context/analysis-result-cache-context';
 import { useGuardedPress } from '@/utils/press-guard';
 
 const POLLING_INTERVAL_MS = 2_000;
@@ -20,18 +22,25 @@ const DEFAULT_ANIMATION_SIZE = 280;
 const SHORT_ANIMATION_SIZE = 216;
 const VERY_SHORT_ANIMATION_SIZE = 188;
 const PAGE_UNAVAILABLE_ERROR_CODE = 'PAGE_UNAVAILABLE';
+const SCAN_STEP_MESSAGES = {
+  checkingDuplicate: '\uC800\uC7A5 \uC5EC\uBD80\uB97C \uD655\uC778\uD558\uACE0 \uC788\uC5B4\uC694',
+  requestingAnalysis: '\uBCF4\uC548 \uAC80\uC0AC\uB97C \uC694\uCCAD\uD558\uACE0 \uC788\uC5B4\uC694',
+  pollingAnalysis: '\uAC80\uC0AC \uACB0\uACFC\uB97C \uD655\uC778\uD558\uACE0 \uC788\uC5B4\uC694',
+};
 const PAGE_UNAVAILABLE_DEFAULT_MESSAGE = '페이지에 연결할 수 없습니다.';
 const PAGE_UNAVAILABLE_HELP_MESSAGE =
   '사이트 접속이 제한되었거나 일시적으로 응답하지 않을 수 있습니다.';
 
 export default function ScanningScreen() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
+  const { setAnalysisResult } = useAnalysisResultCache();
   const isFocused = useIsFocused();
   const { url: urlParam } = useLocalSearchParams<{ url?: string | string[] }>();
   const url = getUrlParam(urlParam);
   const { height: windowHeight } = useWindowDimensions();
   const tabBarHeight = useBottomTabBarHeight();
   const [errorMessage, setErrorMessage] = useState('');
+  const [scanStepMessage, setScanStepMessage] = useState(SCAN_STEP_MESSAGES.checkingDuplicate);
   const [retryKey, setRetryKey] = useState(0);
   const getTokenRef = useRef(getToken);
   const currentAbortControllerRef = useRef<AbortController | null>(null);
@@ -108,12 +117,15 @@ export default function ScanningScreen() {
     }
 
     setErrorMessage('');
+    setScanStepMessage(SCAN_STEP_MESSAGES.checkingDuplicate);
     screenTimeoutId = setTimeout(handleScreenTimeout, SCAN_SCREEN_TIMEOUT_MS);
 
     runAnalysisPolling({
       getToken: () => getTokenRef.current(),
       url,
       signal: abortController.signal,
+      onStep: setScanStepMessage,
+      onResolvedAnalysis: setAnalysisResult,
       canNavigate: () => isActive && !didTimeout && !hasNavigated,
       onNavigate: () => {
         hasNavigated = true;
@@ -144,7 +156,7 @@ export default function ScanningScreen() {
       }
       abortController.abort();
     };
-  }, [isLoaded, isSignedIn, retryKey, url]);
+  }, [isLoaded, isSignedIn, retryKey, setAnalysisResult, url]);
 
   const hasError = errorMessage.length > 0;
   const isScanning = !hasError;
@@ -240,7 +252,7 @@ export default function ScanningScreen() {
           {hasError ? '검사를 완료하지 못했어요' : '보안 검사 중입니다'}
         </Text>
         <Text style={[styles.subtitle, isShortScreen && styles.subtitleCompact, hasError && styles.errorText]}>
-          {hasError ? errorMessage : '약 5-10초 정도 소요돼요'}
+          {hasError ? errorMessage : scanStepMessage}
         </Text>
 
         {/* 검사 대상 카드 */}
@@ -278,20 +290,39 @@ async function runAnalysisPolling({
   getToken,
   url,
   signal,
+  onStep,
+  onResolvedAnalysis,
   canNavigate,
   onNavigate,
 }: {
   getToken: () => Promise<string | null>;
   url: string;
   signal: AbortSignal;
+  onStep: (message: string) => void;
+  onResolvedAnalysis: (analysis: AnalysisResponse) => void;
   canNavigate: () => boolean;
   onNavigate: () => void;
 }) {
   const deadline = Date.now() + SCAN_SCREEN_TIMEOUT_MS;
+  onStep(SCAN_STEP_MESSAGES.checkingDuplicate);
+  const savedLinkCheck = await checkSavedLinkUrl(getToken, url, { signal });
+
+  if (savedLinkCheck.exists) {
+    throw new Error('DUPLICATE_SAVED_LINK');
+  }
+
+  onStep(SCAN_STEP_MESSAGES.requestingAnalysis);
   let analysis = await requestAnalysis(getToken, url, { signal });
 
   while (!signal.aborted) {
-    const handled = handleAnalysisResult(analysis, url, signal, canNavigate, onNavigate);
+    const handled = handleAnalysisResult(
+      analysis,
+      url,
+      signal,
+      canNavigate,
+      onNavigate,
+      onResolvedAnalysis,
+    );
 
     if (handled) {
       return;
@@ -304,6 +335,7 @@ async function runAnalysisPolling({
     }
 
     await wait(Math.min(POLLING_INTERVAL_MS, remainingMs), signal);
+    onStep(SCAN_STEP_MESSAGES.pollingAnalysis);
     analysis = await fetchAnalysis(getToken, analysis.analysisId, { signal });
   }
 }
@@ -314,6 +346,7 @@ function handleAnalysisResult(
   signal: AbortSignal,
   canNavigate: () => boolean,
   onNavigate: () => void,
+  onResolvedAnalysis: (analysis: AnalysisResponse) => void,
 ) {
   if (analysis.status === 'queued') {
     return false;
@@ -328,6 +361,7 @@ function handleAnalysisResult(
   }
 
   if (!signal.aborted && canNavigate()) {
+    onResolvedAnalysis(analysis);
     onNavigate();
     router.replace({
       pathname: getResultPath(analysis.verdict),
@@ -404,6 +438,10 @@ function getAnalysisErrorMessage(error: unknown) {
 
     if (error.message === 'MISSING_VERDICT') {
       return '분석 결과를 확인할 수 없습니다. 잠시 후 다시 시도해주세요.';
+    }
+
+    if (error.message === 'DUPLICATE_SAVED_LINK') {
+      return '\uC774\uBBF8 \uC800\uC7A5\uB41C \uB9C1\uD06C\uC785\uB2C8\uB2E4.';
     }
 
     if (error.message && error.message !== 'ANALYSIS_FAILED') {
