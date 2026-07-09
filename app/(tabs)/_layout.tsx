@@ -4,6 +4,7 @@ import { Redirect, router, Tabs } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 
 import { ShareIntentRouter } from '@/components/share-intent-router';
+import { AppLoadingScreen } from '@/components/ui/app-loading-screen';
 import { BottomTabBar, type TabVariant } from '@/components/ui/bottom-tab-bar';
 import { FoldersProvider } from '@/context/folders-context';
 import { SavedLinksProvider } from '@/context/saved-links-context';
@@ -136,7 +137,7 @@ export default function TabLayout() {
   }, [isLoaded, isSignedIn, sessionId]);
 
   if (!isLoaded) {
-    return null;
+    return <AppLoadingScreen />;
   }
 
   if (!isSignedIn) {
@@ -144,7 +145,7 @@ export default function TabLayout() {
   }
 
   if (!hasSyncedMember) {
-    return null;
+    return <AppLoadingScreen />;
   }
 
   return (

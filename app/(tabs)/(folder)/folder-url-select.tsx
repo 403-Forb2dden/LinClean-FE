@@ -5,9 +5,11 @@ import {
   Text,
   View,
 } from 'react-native';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { SelectableLinkCard } from '@/components/ui/selectable-link-card';
 import { Colors, Typography } from '@/constants/theme';
 import { getFolderErrorMessage, useFolders } from '@/context/folders-context';
@@ -71,25 +73,17 @@ export default function FolderUrlSelectScreen() {
 
   const selectedCount = selectedIds.size;
 
-  return (
-    <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: '새 폴더 만들기',
-          headerBackTitle: '',
-          headerTransparent: false,
-          headerStyle: { backgroundColor: Colors.brand.background },
-          headerTitleStyle: {
-            ...Typography.title,
-            color: Colors.brand.text,
-          },
-          headerTintColor: Colors.brand.text,
-          headerShadowVisible: false,
-        }}
-      />
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/(folder)');
+    }
+  };
 
-      <View style={styles.container}>
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScreenHeader title="새 폴더 만들기" onBack={handleBack} />
         {/* ── 폴더명 표시 ── */}
         <View style={styles.folderNameRow}>
           <Text style={styles.folderNameLabel}>현재 폴더명</Text>
@@ -141,8 +135,7 @@ export default function FolderUrlSelectScreen() {
             />
           </View>
         </View>
-      </View>
-    </>
+    </SafeAreaView>
   );
 }
 

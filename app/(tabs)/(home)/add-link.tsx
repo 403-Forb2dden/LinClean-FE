@@ -12,9 +12,11 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScanButton } from '@/components/ui/scan-button';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { Colors, Typography } from '@/constants/theme';
 import { useGuardedPress } from '@/utils/press-guard';
 import { normalizeHttpUrlInput } from '@/utils/shared-url';
@@ -132,24 +134,17 @@ export default function AddLinkScreen() {
     setError('');
   }, { lockMs: 250 });
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/(home)');
+    }
+  };
+
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: '링크 추가',
-          headerBackTitle: '',
-          headerTransparent: false,
-          headerStyle: { backgroundColor: Colors.brand.background },
-          headerTitleStyle: {
-            ...Typography.title,
-            color: Colors.brand.text,
-          },
-          headerTintColor: Colors.brand.text,
-          headerShadowVisible: false,
-        }}
-      />
-      <View style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScreenHeader title="링크 추가" onBack={handleBack} />
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -215,8 +210,7 @@ export default function AddLinkScreen() {
             </View>
           </View>
         </KeyboardAvoidingView>
-      </View>
-    </>
+    </SafeAreaView>
   );
 }
 

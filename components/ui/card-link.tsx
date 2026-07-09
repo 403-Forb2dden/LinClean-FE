@@ -70,8 +70,22 @@ export function CardLink({
 
   const handleMorePress = (event: GestureResponderEvent) => {
     event.stopPropagation();
-    moreRef.current?.measure((_fx, _fy, width, height, px, py) => {
-      guardedMore?.({ x: px, y: py, width, height });
+
+    const { pageX, pageY } = event.nativeEvent;
+    const fallbackAnchor = { x: pageX, y: pageY, width: 1, height: 1 };
+
+    if (!moreRef.current) {
+      guardedMore?.(fallbackAnchor);
+      return;
+    }
+
+    moreRef.current.measure((_fx, _fy, width, height, px, py) => {
+      const measuredAnchor = { x: px, y: py, width, height };
+      const anchor = Number.isFinite(px) && Number.isFinite(py) && width > 0 && height > 0
+        ? measuredAnchor
+        : fallbackAnchor;
+
+      guardedMore?.(anchor);
     });
   };
 

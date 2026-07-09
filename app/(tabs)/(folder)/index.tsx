@@ -312,7 +312,6 @@ export default function FolderScreen() {
                   urlCount={folder.linkCount}
                   width={folderCardWidth}
                   variant="plain"
-                  compactFolderName={isCompactWidth}
                   onPress={() => router.push({ pathname: '/(tabs)/(folder)/[id]' as any, params: { id: folder.id } })}
                   onMorePress={(anchor) => handleMorePress(folder.id, anchor)}
                 />
@@ -436,11 +435,11 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: CONTENT_HORIZONTAL_PADDING,
     paddingBottom: 32,
-    gap: 20,
+    gap: 12,
   },
 
   header: {
-    paddingTop: 16,
+    paddingTop: 6,
     gap: 4,
   },
   title: {

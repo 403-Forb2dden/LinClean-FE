@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Typography } from '@/constants/theme';
 import { useGuardedPress } from '@/utils/press-guard';
@@ -158,7 +157,6 @@ export function FilterChip({
   const [isOpen, setIsOpen] = useState(false);
   const [chipBounds, setChipBounds] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const chipRef = useRef<View>(null);
-  const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
 
   const currentItem = items.find((i) => i.value === selectedValue);
@@ -172,7 +170,7 @@ export function FilterChip({
     DROPDOWN_SCREEN_PADDING,
     Math.min(chipBounds.x, width - dropdownWidth - DROPDOWN_SCREEN_PADDING),
   );
-  const dropdownTop = chipBounds.y + chipBounds.height + insets.top + 4;
+  const dropdownTop = chipBounds.y + chipBounds.height + 4;
   const dropdownMaxHeight = Math.max(
     DROPDOWN_MIN_HEIGHT,
     Math.min(height * DROPDOWN_MAX_HEIGHT_RATIO, height - dropdownTop - DROPDOWN_SCREEN_PADDING),

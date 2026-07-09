@@ -1,4 +1,5 @@
-import { Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRef } from 'react';
+import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Colors, Typography } from '@/constants/theme';
 import { useGuardedPress } from '@/utils/press-guard';
 import type { AnchorPosition } from './folder-card';
@@ -6,6 +7,17 @@ import type { AnchorPosition } from './folder-card';
 const MENU_WIDTH = 140;
 const MENU_ITEM_HEIGHT = 48;
 const GAP = 4;
+const SCREEN_PADDING = 8;
+
+function isValidAnchor(anchor?: AnchorPosition): anchor is AnchorPosition {
+  return Boolean(
+    anchor &&
+      Number.isFinite(anchor.x) &&
+      Number.isFinite(anchor.y) &&
+      Number.isFinite(anchor.width) &&
+      Number.isFinite(anchor.height),
+  );
+}
 
 export interface ContextMenuItem {
   label: string;
@@ -31,7 +43,7 @@ export function FolderContextMenu({
   onDelete,
   onDismiss,
 }: FolderContextMenuProps) {
-  const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   const resolvedItems: ContextMenuItem[] = items ?? [
     { label: '폴더명 수정', onPress: () => onEditName?.() },
@@ -44,16 +56,24 @@ export function FolderContextMenu({
   });
 
   const menuHeight = MENU_ITEM_HEIGHT * resolvedItems.length + (resolvedItems.length - 1);
+  const lastAnchorRef = useRef<AnchorPosition | undefined>(undefined);
 
-  const menuTop = anchor
-    ? anchor.y + anchor.height + GAP + menuHeight > screenHeight
-      ? anchor.y - menuHeight - GAP
-      : anchor.y + anchor.height + GAP
-    : screenHeight / 2;
+  if (isValidAnchor(anchor)) {
+    lastAnchorRef.current = anchor;
+  }
 
-  const menuLeft = anchor
-    ? Math.min(anchor.x, screenWidth - MENU_WIDTH - 8)
-    : (screenWidth - MENU_WIDTH) / 2;
+  const resolvedAnchor = isValidAnchor(anchor) ? anchor : lastAnchorRef.current;
+  const fallbackLeft = Math.max(SCREEN_PADDING, screenWidth - MENU_WIDTH - SCREEN_PADDING);
+
+  const menuTop = resolvedAnchor
+    ? resolvedAnchor.y + resolvedAnchor.height + GAP + menuHeight > screenHeight
+      ? resolvedAnchor.y - menuHeight - GAP
+      : resolvedAnchor.y + resolvedAnchor.height + GAP
+    : SCREEN_PADDING + GAP;
+
+  const menuLeft = resolvedAnchor
+    ? Math.min(resolvedAnchor.x, screenWidth - MENU_WIDTH - SCREEN_PADDING)
+    : fallbackLeft;
 
   return (
     <Modal

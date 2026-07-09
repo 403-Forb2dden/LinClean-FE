@@ -172,11 +172,11 @@ export const Typography = {
 
 export const ComponentTokens = {
   folderScreen: {
-    contentHorizontalPadding: 24,
-    canvasPaddingVertical: 16,
-    canvasGap: 16,
-    gridGap: 12,
-    minTwoColumnCardWidth: 120,
+    contentHorizontalPadding: 20,
+    canvasPaddingVertical: 8,
+    canvasGap: 12,
+    gridGap: 10,
+    minTwoColumnCardWidth: 150,
     headerRowGap: 10,
     compactWidth: 380,
     subtitleRowOffsetTop: -2,

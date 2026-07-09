@@ -5,11 +5,11 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useShareIntentContext } from 'expo-share-intent';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ApiError } from '@/api/api-client';
-import { SocialLoginButton } from '@/components/ui/social-login-button';
+import { SocialLoginButton, type SocialLoginProvider } from '@/components/ui/social-login-button';
 import { Colors, Typography } from '@/constants/theme';
 import { syncAuthenticatedMember } from '@/services/auth-api';
 import { showAlert } from '@/utils/guarded-alert';
@@ -21,6 +21,10 @@ const CLERK_REDIRECT_URL = AuthSession.makeRedirectUri({
   path: 'sso-callback',
 });
 const MEMBER_SYNC_RETRY_DELAYS_MS = [200, 500, 1000];
+const SSO_STRATEGY_BY_PROVIDER = {
+  google: 'oauth_google',
+  apple: 'oauth_apple',
+} as const;
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -50,7 +54,9 @@ export default function LoginScreen() {
   const { hasShareIntent, resetShareIntent, shareIntent } = useShareIntentContext();
   const { notice } = useLocalSearchParams<{ notice?: LoginNotice }>();
   const shownNoticeRef = useRef<LoginNotice | null>(null);
-  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [signingInProvider, setSigningInProvider] = useState<SocialLoginProvider | null>(null);
+  const isSigningIn = signingInProvider !== null;
+  const shouldShowAppleLogin = Platform.OS === 'ios';
 
   useEffect(() => {
     if (!notice || shownNoticeRef.current === notice) {
@@ -66,17 +72,17 @@ export default function LoginScreen() {
     showAlert(alert.title, alert.message);
   }, [notice]);
 
-  const handleGoogleLogin = async () => {
+  const handleSocialLogin = async (provider: SocialLoginProvider) => {
     if (isSigningIn) {
       return;
     }
 
-    setIsSigningIn(true);
+    setSigningInProvider(provider);
     let sessionActivated = false;
 
     try {
       const { createdSessionId, setActive } = await startSSOFlow({
-        strategy: 'oauth_google',
+        strategy: SSO_STRATEGY_BY_PROVIDER[provider],
         redirectUrl: CLERK_REDIRECT_URL,
       });
 
@@ -104,7 +110,7 @@ export default function LoginScreen() {
         '계정 연결 중 서버와 통신하지 못했습니다. 잠시 후 다시 시도해주세요.'
       );
     } finally {
-      setIsSigningIn(false);
+      setSigningInProvider(null);
     }
   };
 
@@ -157,10 +163,18 @@ export default function LoginScreen() {
       <View style={styles.bottomSection}>
         <SocialLoginButton
           provider="google"
-          label={isSigningIn ? 'Google 로그인 중...' : 'Google로 계속하기'}
-          onPress={handleGoogleLogin}
+          label={signingInProvider === 'google' ? 'Google 로그인 중...' : 'Google로 계속하기'}
+          onPress={() => handleSocialLogin('google')}
           disabled={isSigningIn}
         />
+        {shouldShowAppleLogin && (
+          <SocialLoginButton
+            provider="apple"
+            label={signingInProvider === 'apple' ? 'Apple 로그인 중...' : 'Apple로 계속하기'}
+            onPress={() => handleSocialLogin('apple')}
+            disabled={isSigningIn}
+          />
+        )}
 
         <Text style={styles.terms}>
           계속 진행하면 서비스 이용약관 및 개인정보 처리방침에 동의하는 것으로 간주합니다.

@@ -9,9 +9,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { router, Stack } from 'expo-router';
+import { router } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { Colors, Typography } from '@/constants/theme';
 import { useFolders } from '@/context/folders-context';
 import { useGuardedPress } from '@/utils/press-guard';
@@ -58,24 +60,17 @@ export default function FolderNameScreen() {
   };
   const guardedClearFolderName = useGuardedPress(() => setFolderName(''), { lockMs: 250 });
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/(folder)');
+    }
+  };
+
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: '새 폴더 만들기',
-          headerBackTitle: '',
-          headerTransparent: false,
-          headerStyle: { backgroundColor: Colors.brand.background },
-          headerTitleStyle: {
-            ...Typography.title,
-            color: Colors.brand.text,
-          },
-          headerTintColor: Colors.brand.text,
-          headerShadowVisible: false,
-        }}
-      />
-      <View style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScreenHeader title="새 폴더 만들기" onBack={handleBack} />
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -130,8 +125,7 @@ export default function FolderNameScreen() {
             </View>
           </View>
         </KeyboardAvoidingView>
-      </View>
-    </>
+    </SafeAreaView>
   );
 }
 
